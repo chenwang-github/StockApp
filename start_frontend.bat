@@ -1,9 +1,9 @@
 @echo off
 echo Starting local web server for Stock Dashboard...
 echo.
-echo Opening http://localhost:8000
+echo Server will start at http://localhost:8000/index.html
 echo Press Ctrl+C to stop the server
 echo.
 
-cd "d:\Personal Project\StockApp"
-C:/Python313/python.exe -m http.server 8000
+cd /d "d:\Personal Project\StockApp"
+python -m SimpleHTTPServer 8000

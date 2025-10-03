@@ -1,0 +1,72 @@
+# Stock market data CSV files
+data/stock_market_data/**/*.csv
+
+# JSON data files (if any)
+data/stock_market_data/**/*.json
+
+# Alternative patterns for CSV files in specific directories
+data/stock_market_data/forbes2000/csv/*.csv
+data/stock_market_data/nasdaq/csv/*.csv
+data/stock_market_data/nyse/csv/*.csv
+data/stock_market_data/sp500/csv/*.csv
+
+# Node modules (if using npm)
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+.env.production
+
+# Temporary folders
+tmp/
+temp/
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
