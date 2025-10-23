@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>📈 Stock Viewer</title>
+    
+    <!-- External Chart.js libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+        }
+
+        /* Mobile: Remove padding and border-radius for full-width */
+        @media (max-width: 768px) {
+            body {
+                background: white;
+            }
+            .container {
+                border-radius: 0;
+                box-shadow: none;
+            }
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: #667eea;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            margin: 0;
+        }
+
+        @media (min-width: 769px) {
+            .header {
+                background: white;
+                color: #333;
+                border-bottom: 2px solid #eee;
+                margin-bottom: 30px;
+            }
+            .header h1 {
+                font-size: 2.5em;
+            }
+        }
+
+        .controls {
+            padding: 15px;
+            background: white;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 769px) {
+            .controls {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                margin-bottom: 30px;
+                margin-top: 30px;
+                border-top: none;
+            }
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .stock-search-container {
+            position: relative;
+            width: 100%;
+            display: flex;
+            gap: 8px;
+        }
+
+        #stockSearch {
+            flex: 1;
+            padding: 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            -webkit-appearance: none;
+        }
+
+        #stockSearch:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .load-stock-btn {
+            padding: 14px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            white-space: nowrap;
+        }
+
+        .load-stock-btn:hover {
+            background: #5568d3;
+        }
+
+        .load-stock-btn:active {
+            background: #4451b8;
+        }
+
+        /* Larger touch target on mobile */
+        @media (max-width: 768px) {
+            #stockSearch {
+                padding: 16px;
+                font-size: 17px;
+            }
+            .load-stock-btn {
+                padding: 16px 20px;
+                font-size: 17px;
+            }
+        }
+
+        .time-range-group {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 5px;
+        }
+
+        .time-range-group::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .time-range-group::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 2px;
+        }
+
+        .time-range-btn {
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
+            min-width: 80px;
+            touch-action: manipulation;
+        }
+
+        .time-range-btn:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .time-range-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* Indicator buttons */
+        .indicators-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .indicator-btn {
+            padding: 10px 18px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            touch-action: manipulation;
+        }
+
+        .indicator-btn:hover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+
+        .indicator-btn.active {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        /* Mobile: larger touch targets */
+        @media (max-width: 768px) {
+            .time-range-btn {
+                padding: 14px 24px;
+                font-size: 15px;
+            }
+            
+            .indicator-btn {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+        }
+
+        .chart-container {
+            background: white;
+            padding: 15px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 769px) {
+            .chart-container {
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                margin-top: 30px;
+                border-top: none;
+            }
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        @media (min-width: 769px) {
+            .chart-wrapper {
+                height: 500px;
+            }
+        }
+
+        /* RSI Chart Styles */
+        .rsi-chart-container {
+            background: white;
+            padding: 15px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            border-top: 1px solid #eee;
+            margin-top: 10px;
+            display: none; /* Hidden by default */
+        }
+
+        .rsi-chart-container.visible {
+            display: block;
+        }
+
+        @media (min-width: 769px) {
+            .rsi-chart-container {
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                margin-top: 20px;
+                border-top: none;
+            }
+        }
+
+        .rsi-chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 0 5px;
+        }
+
+        .rsi-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .rsi-value {
+            font-weight: 700;
+            font-size: 16px;
+            padding: 4px 12px;
+            border-radius: 4px;
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .rsi-value.oversold {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .rsi-value.overbought {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .rsi-chart-wrapper {
+            position: relative;
+            height: 120px;
+        }
+
+        @media (min-width: 769px) {
+            .rsi-chart-wrapper {
+                height: 150px;
+            }
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background: white;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 769px) {
+            .metrics {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+                padding: 20px;
+                margin-bottom: 30px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                margin-top: 30px;
+                border-top: none;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .metrics {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 16px;
+            border-radius: 12px;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (min-width: 769px) {
+            .metric-card {
+                padding: 20px;
+            }
+        }
+
+        .metric-label {
+            font-size: 11px;
+            opacity: 0.9;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        @media (min-width: 769px) {
+            .metric-label {
+                font-size: 12px;
+                margin-bottom: 8px;
+            }
+            .metric-value {
+                font-size: 24px;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #c33;
+        }
+
+        .info-tip {
+            font-size: 11px;
+            color: #999;
+            text-align: center;
+            margin-top: 8px;
+            padding: 0 15px;
+        }
+
+        @media (min-width: 769px) {
+            .info-tip {
+                font-size: 12px;
+                margin-top: 10px;
+            }
+        }
+
+        /* Alarm Section */
+        .alarm-section {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (min-width: 769px) {
+            .alarm-section {
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                border-top: none;
+                margin-top: 30px;
+            }
+        }
+
+        .alarm-section h3 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alarm-columns {
+            display: grid;
+            gap: 20px;
+        }
+
+        @media (min-width: 769px) {
+            .alarm-columns {
+                grid-template-columns: 1fr 1fr;
+                gap: 30px;
+            }
+        }
+
+        .alarm-column {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .alarm-column-header {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .alarm-column-header.buying {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+        }
+
+        .alarm-column-header.selling {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+        }
+
+        .alarm-options {
+            display: grid;
+            gap: 12px;
+        }
+
+        .alarm-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 15px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .alarm-card:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .alarm-card.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .alarm-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .alarm-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .alarm-icon {
+            font-size: 20px;
+        }
+
+        .alarm-toggle {
+            width: 50px;
+            height: 28px;
+            background: #ccc;
+            border-radius: 14px;
+            position: relative;
+            transition: background 0.3s;
+        }
+
+        .alarm-card.active .alarm-toggle {
+            background: #4ade80;
+        }
+
+        .alarm-toggle::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: left 0.3s;
+        }
+
+        .alarm-card.active .alarm-toggle::after {
+            left: 25px;
+        }
+
+        .alarm-params {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .alarm-card.active .alarm-params {
+            border-top-color: rgba(255,255,255,0.3);
+        }
+
+        .alarm-params label {
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        .alarm-params .direction-select {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            font-weight: 600;
+            cursor: pointer;
+            min-width: 60px;
+        }
+
+        .alarm-params .ma-select-1,
+        .alarm-params .ma-select-2 {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            font-weight: 600;
+            cursor: pointer;
+            min-width: 80px;
+        }
+
+        .alarm-params .ma-direction-select {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            font-weight: 600;
+            cursor: pointer;
+            min-width: 100px;
+        }
+
+        .alarm-card.active .alarm-params .direction-select,
+        .alarm-card.active .alarm-params .ma-select-1,
+        .alarm-card.active .alarm-params .ma-select-2,
+        .alarm-card.active .alarm-params .ma-direction-select {
+            border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.9);
+        }
+
+        .alarm-params .direction-select:focus,
+        .alarm-params .ma-select-1:focus,
+        .alarm-params .ma-select-2:focus,
+        .alarm-params .ma-direction-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .alarm-params input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 100px;
+            background: white;
+            font-weight: 600;
+        }
+
+        .alarm-card.active .alarm-params input {
+            border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.9);
+        }
+
+        .alarm-params input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .alarm-params .unit {
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        .alarm-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .alarm-card.active .alarm-actions {
+            border-top-color: rgba(255,255,255,0.3);
+        }
+
+        .alarm-action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .alarm-action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .alarm-action-btn.buy {
+            border-color: #28a745;
+            color: #28a745;
+        }
+
+        .alarm-action-btn.buy:hover {
+            background: #28a745;
+            color: white;
+        }
+
+        .alarm-action-btn.buy.active {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .alarm-action-btn.sell {
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+
+        .alarm-action-btn.sell:hover {
+            background: #dc3545;
+            color: white;
+        }
+
+        .alarm-action-btn.sell.active {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .alarm-card.active .alarm-action-btn {
+            border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.9);
+        }
+
+        .alarm-card.active .alarm-action-btn.buy.active {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+
+        .alarm-card.active .alarm-action-btn.sell.active {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .alarm-card {
+                padding: 14px;
+            }
+            
+            .alarm-params .direction-select,
+            .alarm-params .ma-select-1,
+            .alarm-params .ma-select-2,
+            .alarm-params .ma-direction-select {
+                padding: 10px 12px;
+                font-size: 16px;
+                min-width: 70px;
+            }
+            
+            .alarm-params input {
+                padding: 10px 14px;
+                font-size: 16px;
+                width: 110px;
+            }
+
+            .alarm-action-btn {
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+        }
+
+        /* Email Notification Section */
+        .notification-section {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (min-width: 769px) {
+            .notification-section {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                border-top: none;
+                margin-top: 30px;
+            }
+        }
+
+        .notification-section h3 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .notification-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .notification-info {
+            padding: 12px;
+            background: #f0f7ff;
+            border-left: 3px solid #667eea;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .email-input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .email-input-group input[type="email"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .email-input-group input[type="email"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .subscribe-btn {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .subscribe-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .subscribe-btn:active {
+            transform: translateY(0);
+        }
+
+        .selected-alerts-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 40px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            align-items: center;
+        }
+
+        .alert-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .alert-tag.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .empty-alerts-message {
+            color: #999;
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        /* Trading Conditions Section */
+        .trading-section {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (min-width: 769px) {
+            .trading-section {
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                border-top: none;
+                margin-top: 30px;
+            }
+        }
+
+        .trading-section h3 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .trading-columns {
+            display: grid;
+            gap: 15px;
+        }
+
+        @media (min-width: 769px) {
+            .trading-columns {
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+        }
+
+        .trading-column {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+        }
+
+        .trading-column h4 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #333;
+        }
+
+        .condition-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .condition-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s;
+        }
+
+        .condition-item.selected {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .condition-item.selected.sell {
+            border-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .condition-item-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .condition-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #28a745;
+        }
+
+        .condition-item.sell .condition-checkbox {
+            accent-color: #dc3545;
+        }
+
+        .condition-icon {
+            font-size: 18px;
+        }
+
+        .condition-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .add-condition-btn {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .add-condition-btn:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .trading-params {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .trading-param-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .trading-param-row label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            min-width: 80px;
+        }
+
+        .trading-param-row input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            flex: 1;
+            max-width: 150px;
+        }
+
+        .trading-param-row input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .trading-param-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .trading-param-row label {
+                min-width: auto;
+            }
+            
+            .trading-param-row input {
+                width: 100%;
+                max-width: none;
+            }
+        }
+
+        /* Run Strategy Section */
+        .run-strategy-container {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+        }
+
+        .run-strategy-btn {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .run-strategy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+        }
+
+        .run-strategy-btn:active {
+            transform: translateY(0);
+        }
+
+        .run-strategy-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Results Section */
+        .results-section {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+            display: none;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        @media (min-width: 769px) {
+            .results-section {
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                border-top: none;
+                margin-top: 30px;
+            }
+        }
+
+        .results-section h3 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .results-summary {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 769px) {
+            .results-summary {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 15px;
+            }
+        }
+
+        .result-card {
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            color: white;
+        }
+
+        .result-card.positive {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .result-card.negative {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .result-card-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .result-card-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .window-card {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .window-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .transactions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .transactions-table th {
+            background: #f8f9fa;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .transactions-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .transactions-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .transaction-type {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .transaction-type.buy {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .transaction-type.sell {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @media (max-width: 768px) {
+            .transactions-table {
+                font-size: 12px;
+            }
+            
+            .transactions-table th,
+            .transactions-table td {
+                padding: 8px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 Stocks</h1>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>📊 Stock Symbol</label>
+                <div class="stock-search-container">
+                    <input type="text" id="stockSearch" placeholder="Enter stock symbol (e.g., AAPL, QQQ, MSFT)" autocomplete="off">
+                    <button id="loadStockBtn" class="load-stock-btn">Load</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>⏰ Time Range</label>
+                <div class="time-range-group">
+                    <button class="time-range-btn" data-days="30">1M</button>
+                    <button class="time-range-btn" data-days="90">3M</button>
+                    <button class="time-range-btn" data-days="180">6M</button>
+                    <button class="time-range-btn active" data-days="365">1Y</button>
+                    <button class="time-range-btn" data-days="730">2Y</button>
+                    <button class="time-range-btn" data-days="1825">5Y</button>
+                    <button class="time-range-btn" data-days="99999">ALL</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="metrics" id="metrics">
+            <!-- Metrics will be populated here -->
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-wrapper">
+                <canvas id="stockChart"></canvas>
+            </div>
+            <div class="info-tip">
+                💡 Tap the chart to see details
+            </div>
+        </div>
+
+        <!-- RSI Chart -->
+        <div class="rsi-chart-container">
+            <div class="rsi-chart-header">
+                <span class="rsi-label">RSI (14)</span>
+                <span class="rsi-value" id="rsiValue">--</span>
+            </div>
+            <div class="rsi-chart-wrapper">
+                <canvas id="rsiChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Alarm Section -->
+        <div class="alarm-section">
+            <h3>🔔 Show Alerts</h3>
+            
+            <div class="alarm-columns">
+                <!-- LEFT COLUMN: BUYING SIGNALS -->
+                <div class="alarm-column">
+                    <div class="alarm-column-header buying">
+                        🟢 Buying Signals
+                    </div>
+
+                    <!-- Price Below (Buy when price drops) -->
+                    <div class="alarm-card" data-alarm-type="below" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">�</span>
+                                <span>Price Below</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params">
+                            <label>Alert when price <</label>
+                            <input type="number" step="0.01" value="200.00" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
+                            <span class="unit">USD</span>
+                        </div>
+                    </div>
+
+                    <!-- N-Week Low (Buy at low) -->
+                    <div class="alarm-card" data-alarm-type="nweek-low" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">⬇️</span>
+                                <span>N-Week Low</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params">
+                            <label>Alert at</label>
+                            <input type="number" min="1" max="52" value="8" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
+                            <span class="unit">week low</span>
+                        </div>
+                    </div>
+
+                    <!-- Moving Average Setting 1 (Buy signal: short MA crosses up long MA) -->
+                    <div class="alarm-card" data-alarm-type="ma-crossover" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">📊</span>
+                                <span>MA Buy Signal</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <label style="white-space: nowrap;">Alert when</label>
+                            <select class="ma-select-1" onclick="event.stopPropagation()" onchange="window.viewer.updateMAValue(this)">
+                                <option value="10">MA-10</option>
+                                <option value="50" selected>MA-50</option>
+                                <option value="100">MA-100</option>
+                                <option value="200">MA-200</option>
+                            </select>
+                            <select class="ma-direction-select" onclick="event.stopPropagation()" onchange="window.viewer.updateMADirection(this)">
+                                <option value="above">is above</option>
+                                <option value="below" selected>is below</option>
+                                <option value="cross-up">crosses up</option>
+                                <option value="cross-down">crosses down</option>
+                            </select>
+                            <select class="ma-select-2" onclick="event.stopPropagation()" onchange="window.viewer.updateMAValue(this)">
+                                <option value="10">MA-10</option>
+                                <option value="50">MA-50</option>
+                                <option value="100">MA-100</option>
+                                <option value="200" selected>MA-200</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Daily Loss % (Buy the dip) -->
+                    <div class="alarm-card" data-alarm-type="daily-loss" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">📉</span>
+                                <span>Daily Loss % (Buy Dip)</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params">
+                            <label>Alert when loss ≥</label>
+                            <input type="number" min="0.1" max="50" step="0.1" value="5" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+
+                    <!-- RSI Oversold (Buy signal) -->
+                    <div class="alarm-card" data-alarm-type="rsi-oversold" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">📊</span>
+                                <span>RSI Oversold (Buy)</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params">
+                            <label>Alert when RSI ≤</label>
+                            <input type="number" min="1" max="50" step="1" value="30" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
+                            <span class="unit">(oversold)</span>
+                        </div>
+                    </div>
+
+                    <!-- Bollinger Bands Lower (Buy signal) -->
+                    <div class="alarm-card" data-alarm-type="bb-lower" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">📉</span>
+                                <span>BB Lower Band (Buy)</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params">
+                            <label>Price touches/crosses lower band</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: SELLING SIGNALS -->
+                <div class="alarm-column">
+                    <div class="alarm-column-header selling">
+                        🔴 Selling Signals
+                    </div>
+
+                    <!-- Price Above (Sell at high price) -->
+                    <div class="alarm-card" data-alarm-type="above" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">�</span>
+                                <span>Price Above</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params">
+                            <label>Alert when price ></label>
+                            <input type="number" step="0.01" value="300.00" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
+                            <span class="unit">USD</span>
+                        </div>
+                    </div>
+
+                    <!-- N-Week High (Sell at high) -->
+                    <div class="alarm-card" data-alarm-type="nweek-high" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">⬆️</span>
+                                <span>N-Week High</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params">
+                            <label>Alert at</label>
+                            <input type="number" min="1" max="52" value="52" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
+                            <span class="unit">week high</span>
+                        </div>
+                    </div>
+
+                    <!-- Moving Average Setting 2 (Sell signal: short MA crosses down long MA) -->
+                    <div class="alarm-card" data-alarm-type="ma-crossover-2" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">📊</span>
+                                <span>MA Sell Signal</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <label style="white-space: nowrap;">Alert when</label>
+                            <select class="ma-select-1" onclick="event.stopPropagation()" onchange="window.viewer.updateMAValue(this)">
+                                <option value="10" selected>MA-10</option>
+                                <option value="50">MA-50</option>
+                                <option value="100">MA-100</option>
+                                <option value="200">MA-200</option>
+                            </select>
+                            <select class="ma-direction-select" onclick="event.stopPropagation()" onchange="window.viewer.updateMADirection(this)">
+                                <option value="above">is above</option>
+                                <option value="below">is below</option>
+                                <option value="cross-up">crosses up</option>
+                                <option value="cross-down" selected>crosses down</option>
+                            </select>
+                            <select class="ma-select-2" onclick="event.stopPropagation()" onchange="window.viewer.updateMAValue(this)">
+                                <option value="10">MA-10</option>
+                                <option value="50" selected>MA-50</option>
+                                <option value="100">MA-100</option>
+                                <option value="200">MA-200</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Daily Gain % (Take profit) -->
+                    <div class="alarm-card" data-alarm-type="daily-gain" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">📈</span>
+                                <span>Daily Gain % (Take Profit)</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params">
+                            <label>Alert when gain ≥</label>
+                            <input type="number" min="0.1" max="50" step="0.1" value="5" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+
+                    <!-- RSI Overbought (Sell signal) -->
+                    <div class="alarm-card" data-alarm-type="rsi-overbought" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">📊</span>
+                                <span>RSI Overbought (Sell)</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params">
+                            <label>Alert when RSI ≥</label>
+                            <input type="number" min="50" max="99" step="1" value="70" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
+                            <span class="unit">(overbought)</span>
+                        </div>
+                    </div>
+
+                    <!-- Bollinger Bands Upper (Sell signal) -->
+                    <div class="alarm-card" data-alarm-type="bb-upper" onclick="window.viewer.toggleAlarm(this)">
+                        <div class="alarm-header">
+                            <div class="alarm-title">
+                                <span class="alarm-icon">📈</span>
+                                <span>BB Upper Band (Sell)</span>
+                            </div>
+                            <div class="alarm-toggle"></div>
+                        </div>
+                        <div class="alarm-params">
+                            <label>Price touches/crosses upper band</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Notification Section -->
+        <div class="notification-section">
+            <h3>📧 Get Email Notifications</h3>
+            <div class="notification-content">
+                <div class="notification-info">
+                    💡 Select active alarms above to receive email notifications when they trigger.
+                </div>
+                <div class="selected-alerts-list" id="selectedAlertsList">
+                    <span class="empty-alerts-message">No alarms selected for notifications</span>
+                </div>
+                <div class="email-input-group">
+                    <input type="email" id="emailInput" placeholder="Enter your email address" value="user@example.com">
+                    <button class="subscribe-btn" onclick="window.viewer.subscribeToNotifications()">
+                        🔔 Subscribe to Alerts
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="viewer.js"></script>
+</body>
+</html>

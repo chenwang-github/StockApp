@@ -1,0 +1,61 @@
+name: StockApp Frontend Deployment
+
+on:
+  push:
+    branches:
+      - master  # Deploy when pushing to master branch
+    paths:
+      - 'frontend/**'  # Only trigger when frontend files change
+  workflow_dispatch:  # Allow manual deployment
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure using OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Option 1: Deploy to Azure Static Web Apps
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "frontend"  # Location of your static files
+          output_location: ""  # No build output, already static
+          skip_app_build: true  # Skip build since it's static HTML/JS
+
+      # Option 2: Deploy to Azure Blob Storage (Static Website)
+      # Uncomment this section if you prefer Blob Storage hosting
+      # - name: Upload to Azure Blob Storage
+      #   uses: azure/CLI@v1
+      #   with:
+      #     inlineScript: |
+      #       az storage blob upload-batch \
+      #         --account-name ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }} \
+      #         --auth-mode key \
+      #         --destination '$web' \
+      #         --source ./frontend \
+      #         --overwrite \
+      #         --pattern "*.html" --pattern "*.js" --pattern "*.css" --pattern "*.json"
+
+      # Option 3: Deploy to Azure App Service (if you have one)
+      # Uncomment this section if you want to use App Service
+      # - name: Deploy to Azure Web App
+      #   uses: azure/webapps-deploy@v2
+      #   with:
+      #     app-name: 'stockapp-frontend'
+      #     package: ./frontend

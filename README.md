@@ -1,105 +1,222 @@
-# Stock Market Dashboard
+# Stock Trading Strategy Dashboard
 
-一个类似Yahoo Finance的股票观察界面，使用Streamlit和Plotly构建。
+An interactive stock trading strategy testing platform with historical data analysis and custom buy/sell condition testing.
 
-## 功能特性
+## 🚀 Current Features
 
-### 📊 核心功能
-- **股票选择**: 从1000+个Forbes 2000股票中选择
-- **多时间段**: 1天、1周、3周、6个月、2年、5年、全时间
-- **双显示模式**: 股价显示 vs 百分比变化显示
-- **交互式图表**: 支持拖拽缩放和时间选择器
+### 📊 Core Functionality
+- **Stock Selection**: Choose from 1000+ Forbes 2000 stocks with real-time search
+- **Strategy Testing**: Test custom buy/sell conditions with historical data
+- **Multiple Buy Conditions**: 
+  - Time-based: Weekly, bi-weekly, monthly, quarterly
+  - Price-based: 2-week, 4-week, 8-week, 12-week lows
+- **Interactive Charts**: Drag to navigate, zoom, and analyze price movements
+- **Performance Analytics**: ROI, profit/loss, total returns with detailed breakdowns
 
-### 🎯 界面特点
-- **实时指标**: 当前价格、期间变化、最高/最低价
-- **专业布局**: 类似Yahoo Finance的清爽界面
-- **响应式设计**: 适配不同屏幕尺寸
-- **数据表格**: 可展开查看原始数据
+### 🎯 Trading Strategy Features
+- **Custom Logic**: Combine different buy and sell conditions
+- **Historical Backtesting**: Test strategies against years of historical data
+- **Visual Markers**: See exact buy/sell points on price charts
+- **Strategy History**: Save and compare multiple strategy tests
+- **Export Functionality**: Export test results to CSV
 
-### 📈 图表功能
-- **范围选择器**: 快速切换时间段
-- **滑动条**: 精确调整显示范围
-- **悬停提示**: 详细的价格和日期信息
-- **平滑缩放**: 支持鼠标滚轮和拖拽
+### 📈 User Interface
+- **Modern Design**: Clean, professional trading dashboard
+- **Real-time Search**: Fast stock symbol lookup with autocomplete
+- **Responsive Layout**: Works on desktop and mobile devices
+- **Time Range Controls**: Flexible date range selection for backtesting
 
-## 安装和运行
+## 🏃‍♂️ Quick Start
 
-### 方法1：使用启动脚本 (推荐)
+### Method 1: Using Batch File (Recommended)
 ```bash
-# Windows用户
-run_dashboard.bat
-
-# 或手动运行
-pip install -r requirements.txt
-streamlit run stock_dashboard.py
+# Windows users
+start_frontend.bat
 ```
 
-### 方法2：手动安装
+### Method 2: Manual Start
 ```bash
-pip install streamlit plotly pandas numpy
-streamlit run stock_dashboard.py
+# Navigate to project directory
+cd "d:\Personal Project\StockApp"
+
+# Start Python server
+python -m SimpleHTTPServer 8000
+
+# Open browser to: http://localhost:8000/frontend/viewer.html
 ```
 
-## 数据来源
+## 📊 Data Sources & Recommendations
 
-- **数据集**: Forbes 2000公司股票数据
-- **时间范围**: 1980年12月 - 2022年12月
-- **数据字段**: 开盘价、最高价、最低价、收盘价、成交量
-- **股票数量**: 1000+个知名公司
+### Current Historical Data (Perfect for Backtesting)
+- **Dataset**: Forbes 2000 company stock data  
+- **Time Range**: 1980 - 2022 (Historical data)
+- **Format**: CSV files with OHLCV data
+- **Purpose**: ✅ Excellent for strategy backtesting and historical analysis
 
-## 使用说明
+### 📈 Recommended APIs for Live/Recent Data
 
-### 基本操作
-1. **选择股票**: 在左侧边栏选择要分析的股票代码
-2. **设置时间段**: 选择分析的时间范围
-3. **切换显示**: 选择价格显示或百分比变化显示
-4. **交互分析**: 使用图表下方的滑动条调整显示范围
+#### 🆓 Free Options (Great for Development)
+1. **Alpha Vantage** - Free tier: 5 calls/minute, 500 calls/day
+   ```javascript
+   // Example: Get daily data
+   const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=AAPL&apikey=YOUR_API_KEY`;
+   ```
 
-### 高级功能
-- **拖拽缩放**: 在图表上拖拽选择特定时间段
-- **范围按钮**: 使用图表上方的快捷时间按钮
-- **悬停查看**: 鼠标悬停在数据点上查看详细信息
-- **数据导出**: 在"View Raw Data"中查看原始数据
+2. **Yahoo Finance (Unofficial)** - No API key needed, use with caution
+   ```javascript
+   // Example using yfinance-like approach
+   const url = `https://query1.finance.yahoo.com/v8/finance/chart/AAPL`;
+   ```
 
-## 技术栈
+3. **Finnhub** - Free tier: 60 calls/minute
+   ```javascript
+   const url = `https://finnhub.io/api/v1/quote?symbol=AAPL&token=YOUR_API_KEY`;
+   ```
 
-- **前端框架**: Streamlit
-- **图表库**: Plotly
-- **数据处理**: Pandas, NumPy
-- **样式**: 自定义CSS
+4. **IEX Cloud** - Free tier: 50,000 requests/month
+   ```javascript
+   const url = `https://cloud.iexapis.com/stable/stock/AAPL/chart/1y?token=YOUR_TOKEN`;
+   ```
 
-## 项目结构
+#### 💰 Premium Options (Production Ready)
+- **Polygon.io** - $99/month, real-time data
+- **Quandl** - Various pricing, extensive datasets  
+- **Bloomberg API** - Enterprise level
+- **Reuters Eikon** - Professional traders
+
+#### 🛠️ Implementation Recommendation
+**Best Approach**: Create a data fetching service that can switch between sources:
+
+```javascript
+class DataService {
+    constructor(source = 'alphavantage') {
+        this.source = source;
+        this.apiKey = 'YOUR_API_KEY';
+    }
+    
+    async getStockData(symbol, timeframe = '1y') {
+        switch(this.source) {
+            case 'alphavantage':
+                return await this.fetchAlphaVantage(symbol, timeframe);
+            case 'finnhub':
+                return await this.fetchFinnhub(symbol, timeframe);
+            // Add more sources...
+        }
+    }
+}
+```
+
+#### 📁 Hybrid Data Strategy (Recommended)
+1. **Keep Historical Data** (your current CSV files) for backtesting 1980-2022
+2. **Add Live API** for recent data (2023-present)
+3. **Cache Recent Data** locally to minimize API calls
+4. **Combine Sources** in your app for complete historical + current view
+
+### 🔄 Data Update Strategy
+```javascript
+// Example: Check if we need recent data
+const lastHistoricalDate = '2022-12-31';
+const today = new Date();
+const needsUpdate = today > new Date(lastHistoricalDate);
+
+if (needsUpdate) {
+    // Fetch recent data from API
+    const recentData = await dataService.getStockData(symbol, 'recent');
+    // Combine with historical CSV data
+    const completeData = [...historicalData, ...recentData];
+}
+```
+
+## 🎮 How to Use
+
+### 📈 Strategy Testing Workflow
+1. **Select a Stock**: Use the search box to find and select a stock symbol
+2. **Choose Time Range**: Set start/end years for backtesting (default: 2020-2022)
+3. **Pick Buy Condition**: Select when to buy (weekly, monthly, or at price lows)
+4. **Pick Sell Condition**: Choose when to sell (currently: end of range)
+5. **Test Strategy**: Click "🚀 Test Strategy" to see results
+6. **Analyze Results**: View ROI, profit/loss, and buy/sell points on the chart
+
+### 🔧 Advanced Features
+- **Chart Navigation**: Drag horizontally to scroll through time periods
+- **Time Slider**: Use the slider below the chart for precise navigation  
+- **Weekly Low Conditions**: Test buying at 2, 4, 8, or 12-week price lows
+- **Strategy History**: All tests are automatically saved for comparison
+- **Export Data**: Download test results as CSV files
+
+### 📊 Understanding Results
+- **Green Dots**: Buy points on the chart
+- **Red Dots**: Sell points on the chart  
+- **Total Return %**: Percentage gain/loss of the strategy
+- **Final Value**: What your investment is worth at the end
+- **Profit/Loss**: Absolute dollar amount gained/lost
+
+## 🏗️ Project Structure
 
 ```
 StockApp/
-├── stock_dashboard.py      # 主应用程序
-├── requirements.txt        # 依赖包
-├── run_dashboard.bat      # Windows启动脚本
-├── README.md              # 项目说明
+├── frontend/
+│   ├── viewer.html         # Stock viewer dashboard
+│   └── viewer.js           # Dashboard functionality
+├── start_frontend.bat      # Quick start script
+├── .gitignore             # Git ignore (excludes CSV files)
+├── README.md              # This documentation
 └── data/
     └── stock_market_data/
-        └── forbes2000/
-            └── csv/       # 股票数据文件
+        ├── forbes2000/csv/     # Historical stock data (1980-2022)
+        ├── nasdaq/csv/         # NASDAQ historical data
+        ├── nyse/csv/           # NYSE historical data  
+        └── sp500/csv/          # S&P 500 historical data
 ```
 
-## 常见问题
+## 🛠️ Tech Stack
 
-**Q: 应用无法启动？**
-A: 确保已安装所有依赖包，运行 `pip install -r requirements.txt`
+- **Frontend**: Pure HTML5, CSS3, JavaScript (ES6+)
+- **Charts**: Chart.js 4.4.0 for interactive visualizations
+- **Server**: Python SimpleHTTPServer for local development
+- **Data Format**: CSV files with OHLCV (Open, High, Low, Close, Volume)
+- **Storage**: LocalStorage for strategy history persistence
 
-**Q: 找不到某个股票？**
-A: 检查股票代码是否在Forbes 2000列表中，或尝试搜索相似的代码
+## 🚀 Next Steps & Recommendations
 
-**Q: 图表显示空白？**
-A: 可能是选择的时间段没有数据，尝试选择"All Time"查看
+### 📊 For Current Use (Historical Analysis)
+- ✅ Perfect for backtesting trading strategies
+- ✅ Ideal for learning about different investment approaches  
+- ✅ Great for comparing time-based vs price-based buying strategies
 
-**Q: 性能较慢？**
-A: 大时间范围的数据加载可能需要时间，建议从较短时间段开始
+### 🔄 For Live Trading (Add Recent Data)
+1. **Choose an API**: Start with Alpha Vantage (free tier)
+2. **Implement Data Service**: Add API integration to `viewer.js`
+3. **Hybrid Approach**: Combine historical CSV + live API data
+4. **Cache Strategy**: Store recent data locally to minimize API calls
 
-## 许可证
+### 💡 Future Enhancements
+- Add more sell conditions (stop-loss, profit targets, technical indicators)
+- Implement portfolio diversification testing  
+- Add risk analysis metrics (Sharpe ratio, max drawdown)
+- Include dividend reinvestment calculations
 
-MIT License - 仅供学习和个人使用
+## ❓ Troubleshooting
+
+**Q: Server won't start?**  
+A: Make sure Python is installed and try `python --version`
+
+**Q: Page loads slowly?**  
+A: This is normal on first load while stock symbols are being loaded from directories
+
+**Q: Stock not found?**  
+A: Try typing the full symbol (e.g., "AAPL") or check if it exists in the data folder
+
+**Q: Strategy shows no buy signals?**  
+A: Try different time ranges or buy conditions - some strategies are more selective
+
+**Q: Charts not displaying?**  
+A: Ensure you're accessing via `http://localhost:8000/frontend/viewer.html`, not opening the HTML file directly
+
+## 📜 License
+
+MIT License - Free for educational and personal use
 
 ---
 
-🚀 享受您的股票分析之旅！
+🎯 **Happy Strategy Testing!** Use your historical data to discover profitable trading patterns before applying them to real markets.

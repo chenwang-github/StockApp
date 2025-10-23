@@ -1,0 +1,95 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "pip install (functions)",
+			"type": "shell",
+			"osx": {
+				"command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
+			},
+			"windows": {
+				"command": "${config:azureFunctions.pythonVenv}\\Scripts\\python -m pip install -r requirements.txt"
+			},
+			"linux": {
+				"command": "${config:azureFunctions.pythonVenv}/bin/python -m pip install -r requirements.txt"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "clean (functions)",
+			"command": "dotnet",
+			"args": [
+				"clean",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"type": "process",
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "build (functions)",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"type": "process",
+			"dependsOn": "clean (functions)",
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "clean release (functions)",
+			"command": "dotnet",
+			"args": [
+				"clean",
+				"--configuration",
+				"Release",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"type": "process",
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "publish (functions)",
+			"command": "dotnet",
+			"args": [
+				"publish",
+				"--configuration",
+				"Release",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"type": "process",
+			"dependsOn": "clean release (functions)",
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"type": "func",
+			"dependsOn": "build (functions)",
+			"options": {
+				"cwd": "${workspaceFolder}/backend/bin/Debug/net8.0"
+			},
+			"command": "host start",
+			"isBackground": true,
+			"problemMatcher": "$func-dotnet-watch"
+		}
+	]
+}
