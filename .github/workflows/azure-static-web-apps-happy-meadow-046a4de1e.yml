@@ -12,6 +12,14 @@ jobs:
         with:
           submodules: true
           lfs: false
+      
+      - name: List files to be deployed
+        run: |
+          echo "Files in frontend directory:"
+          ls -la frontend/
+          echo "Checking for i18n files:"
+          ls -la frontend/*.js || echo "No JS files found"
+      
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
