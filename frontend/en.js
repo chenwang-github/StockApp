@@ -73,5 +73,9 @@ const translations_en = {
     notificationInfo: "💡 Select active alarms above to receive email notifications when they trigger.",
     noAlarmsSelected: "No alarms selected for notifications",
     emailPlaceholder: "Enter your email address",
-    subscribeToAlerts: "🔔 Subscribe to Alerts"
+    subscribeToAlerts: "🔔 Subscribe to Alerts",
+    
+    // Error Messages
+    errorLoadDataPrefix: "Please Check if Symbol is Correct. Failed to load data for",
+    errorLoadDataSuffix: ""
 };

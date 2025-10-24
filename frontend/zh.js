@@ -73,5 +73,9 @@ const translations_zh = {
     notificationInfo: "💡 选择上述活动提醒以在触发时接收电子邮件通知。",
     noAlarmsSelected: "未选择任何提醒进行通知",
     emailPlaceholder: "输入您的电子邮件地址",
-    subscribeToAlerts: "🔔 订阅提醒"
+    subscribeToAlerts: "🔔 订阅提醒",
+    
+    // Error Messages
+    errorLoadDataPrefix: "请检查股票代码是否正确。无法加载数据：",
+    errorLoadDataSuffix: ""
 };

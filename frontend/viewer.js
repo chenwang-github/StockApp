@@ -436,7 +436,7 @@ class StockViewer {
         } catch (error) {
             log('Error loading stock data: ' + error.message);
             console.error('Full error:', error);
-            this.showError(`Please Check if Symbol is Correct. Failed to load data for ${symbol}: ${error.message}`);
+            this.showError(`${i18n.t('errorLoadDataPrefix')} ${symbol}: ${error.message}`);
         }
     }
 
