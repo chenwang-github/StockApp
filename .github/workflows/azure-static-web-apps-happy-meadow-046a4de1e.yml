@@ -23,6 +23,5 @@ jobs:
           # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
           app_location: "frontend" # App source code path
           api_location: "" # No API - deploy only frontend
-          output_location: "." # Deploy everything from frontend folder as-is
           skip_api_build: true # Explicitly skip API build
           ###### End of Repository/Build Configurations ######
