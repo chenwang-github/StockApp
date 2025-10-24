@@ -11,7 +11,7 @@
   ],
   "navigationFallback": {
     "rewrite": "/viewer.html",
-    "exclude": ["/api/*", "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico}"]
+    "exclude": ["/api/*", "/**/*.{css,js,json,png,jpg,jpeg,gif,svg,ico}"]
   },
   "responseOverrides": {
     "404": {
