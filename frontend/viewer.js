@@ -464,9 +464,10 @@ class StockViewer {
 
     async fetchAndStoreStock(symbol) {
         try {
-            const functionUrl = 'http://localhost:7071/api/UpdateStockFromYahoo';
+            // Use config from config.js file
+            const functionUrl = `${config.apiBaseUrl}/UpdateStockFromYahoo`;
             
-            log(`Calling Azure Function to fetch and store ${symbol}...`);
+            log(`Calling Azure Function to fetch and store ${symbol}... (${config.environment})`);
             const response = await fetch(`${functionUrl}?symbol=${symbol}`);
             
             if (!response.ok) {

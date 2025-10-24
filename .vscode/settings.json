@@ -1,7 +1,7 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:system",
     "python-envs.pythonProjects": [],
-    "azureFunctions.deploySubpath": "bin/Release/net8.0/publish",
+    "azureFunctions.deploySubpath": "backend/bin/Release/net8.0/publish",
     "azureFunctions.scmDoBuildDuringDeployment": true,
     "azureFunctions.pythonVenv": ".venv",
     "azureFunctions.projectLanguage": "C#",
