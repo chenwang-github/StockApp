@@ -33,7 +33,7 @@ public class UpdateStockFromYahoo
     }
 
     [Function("UpdateStockFromYahoo")]
-    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
+    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequest req)
     {
         _logger.LogInformation("UpdateStockFromYahoo function triggered.");
 
@@ -155,7 +155,7 @@ public class UpdateStockFromYahoo
             
             var url = $"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?period1={startTime}&period2={endTime}&interval=1d&includePrePost=false";
             
-            _logger.LogInformation("Fetching data from Yahoo Finance: {Url}", url);
+            _logger.LogInformation("Fetching data: {Url}", url);
             
             var response = await _httpClient.GetStringAsync(url);
             var jsonDoc = JsonDocument.Parse(response);
@@ -210,7 +210,7 @@ public class UpdateStockFromYahoo
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching data from Yahoo Finance for {Symbol}", symbol);
+            _logger.LogError(ex, "Error fetching data from provider for {Symbol}", symbol);
             return null;
         }
     }

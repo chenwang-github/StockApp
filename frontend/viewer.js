@@ -357,10 +357,10 @@ class StockViewer {
             // Try to download from blob storage
             let csvText = await this.downloadFromBlobStorage(symbol);
             
-            // If not found in blob storage, fetch from Yahoo Finance and store it
+            // If not found in blob storage, fetch from provider and store it
             if (!csvText) {
-                log(`${symbol} not found in blob storage. Fetching from Yahoo Finance...`);
-                document.getElementById('metrics').innerHTML = '<div class="loading">Fetching data from Yahoo Finance...</div>';
+                log(`${symbol} not found in blob storage. Fetching from provider...`);
+                document.getElementById('metrics').innerHTML = '<div class="loading">Fetching data...</div>';
                 
                 await this.fetchAndStoreStock(symbol);
                 
@@ -436,7 +436,7 @@ class StockViewer {
         } catch (error) {
             log('Error loading stock data: ' + error.message);
             console.error('Full error:', error);
-            this.showError(`Failed to load data for ${symbol}: ${error.message}`);
+            this.showError(`Please Check if Symbol is Correct. Failed to load data for ${symbol}: ${error.message}`);
         }
     }
 
