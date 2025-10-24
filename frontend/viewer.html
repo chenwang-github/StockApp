@@ -1667,17 +1667,23 @@
             document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`lang${currentLang.toUpperCase()}`).classList.add('active');
             
-            // Language switcher buttons
+            // Language switcher buttons with auto-refresh
             document.getElementById('langEN').addEventListener('click', () => {
-                i18n.setLanguage('en');
-                document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById('langEN').classList.add('active');
+                const currentLang = i18n.getCurrentLanguage();
+                if (currentLang !== 'en') {
+                    i18n.setLanguage('en');
+                    // Reload page to ensure all content updates
+                    location.reload();
+                }
             });
             
             document.getElementById('langZH').addEventListener('click', () => {
-                i18n.setLanguage('zh');
-                document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-                document.getElementById('langZH').classList.add('active');
+                const currentLang = i18n.getCurrentLanguage();
+                if (currentLang !== 'zh') {
+                    i18n.setLanguage('zh');
+                    // Reload page to ensure all content updates
+                    location.reload();
+                }
             });
         });
     </script>
