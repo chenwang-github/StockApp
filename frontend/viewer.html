@@ -46,11 +46,41 @@
             padding: 20px;
             background: #667eea;
             color: white;
+            position: relative;
         }
 
         .header h1 {
             font-size: 1.5em;
             margin: 0;
+        }
+        
+        .language-switcher {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 5px;
+        }
+        
+        .lang-btn {
+            padding: 6px 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .lang-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .lang-btn.active {
+            background: white;
+            color: #667eea;
+            font-weight: bold;
         }
 
         @media (min-width: 769px) {
@@ -62,6 +92,19 @@
             }
             .header h1 {
                 font-size: 2.5em;
+            }
+            .lang-btn {
+                border: 1px solid #ddd;
+                background: #f5f5f5;
+                color: #333;
+            }
+            .lang-btn:hover {
+                background: #e0e0e0;
+            }
+            .lang-btn.active {
+                background: #667eea;
+                color: white;
+                border-color: #667eea;
             }
         }
 
@@ -1288,28 +1331,33 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📈 Stocks</h1>
+            <h1 data-i18n="title">📈 Stock Viewer</h1>
+            <!-- Language Switcher -->
+            <div class="language-switcher">
+                <button id="langEN" class="lang-btn active">English</button>
+                <button id="langZH" class="lang-btn">中文</button>
+            </div>
         </div>
         
         <div class="controls">
             <div class="control-group">
-                <label>📊 Stock Symbol</label>
+                <label data-i18n="stockSymbol">📊 Stock Symbol</label>
                 <div class="stock-search-container">
-                    <input type="text" id="stockSearch" placeholder="Enter stock symbol (e.g., AAPL, QQQ, MSFT)" autocomplete="off">
-                    <button id="loadStockBtn" class="load-stock-btn">Load</button>
+                    <input type="text" id="stockSearch" data-i18n-placeholder="stockSymbolPlaceholder" placeholder="Enter stock symbol (e.g., AAPL, QQQ, MSFT)" autocomplete="off">
+                    <button id="loadStockBtn" class="load-stock-btn" data-i18n="loadStock">Load</button>
                 </div>
             </div>
             
             <div class="control-group">
-                <label>⏰ Time Range</label>
+                <label data-i18n="timeRange">⏰ Time Range</label>
                 <div class="time-range-group">
-                    <button class="time-range-btn" data-days="30">1M</button>
-                    <button class="time-range-btn" data-days="90">3M</button>
-                    <button class="time-range-btn" data-days="180">6M</button>
-                    <button class="time-range-btn active" data-days="365">1Y</button>
-                    <button class="time-range-btn" data-days="730">2Y</button>
-                    <button class="time-range-btn" data-days="1825">5Y</button>
-                    <button class="time-range-btn" data-days="99999">ALL</button>
+                    <button class="time-range-btn" data-days="30" data-i18n="range1m">1M</button>
+                    <button class="time-range-btn" data-days="90" data-i18n="range3m">3M</button>
+                    <button class="time-range-btn" data-days="180" data-i18n="range6m">6M</button>
+                    <button class="time-range-btn active" data-days="365" data-i18n="range1y">1Y</button>
+                    <button class="time-range-btn" data-days="730" data-i18n="range2y">2Y</button>
+                    <button class="time-range-btn" data-days="1825" data-i18n="range5y">5Y</button>
+                    <button class="time-range-btn" data-days="99999" data-i18n="rangeAll">ALL</button>
                 </div>
             </div>
         </div>
@@ -1322,7 +1370,7 @@
             <div class="chart-wrapper">
                 <canvas id="stockChart"></canvas>
             </div>
-            <div class="info-tip">
+            <div class="info-tip" data-i18n="chartTip">
                 💡 Tap the chart to see details
             </div>
         </div>
@@ -1340,12 +1388,12 @@
 
         <!-- Alarm Section -->
         <div class="alarm-section">
-            <h3>🔔 Show Alerts</h3>
+            <h3 data-i18n="showAlerts">🔔 Show Alerts</h3>
             
             <div class="alarm-columns">
                 <!-- LEFT COLUMN: BUYING SIGNALS -->
                 <div class="alarm-column">
-                    <div class="alarm-column-header buying">
+                    <div class="alarm-column-header buying" data-i18n="buyingSignals">
                         🟢 Buying Signals
                     </div>
 
@@ -1353,13 +1401,13 @@
                     <div class="alarm-card" data-alarm-type="below" onclick="window.viewer.toggleAlarm(this)">
                         <div class="alarm-header">
                             <div class="alarm-title">
-                                <span class="alarm-icon">�</span>
-                                <span>Price Below</span>
+                                <span class="alarm-icon">📉</span>
+                                <span data-i18n="priceBelow">Price Below</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params">
-                            <label>Alert when price <</label>
+                            <label data-i18n="alertWhenPriceLessThan">Alert when price <</label>
                             <input type="number" step="0.01" value="200.00" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
                             <span class="unit">USD</span>
                         </div>
@@ -1370,14 +1418,14 @@
                         <div class="alarm-header">
                             <div class="alarm-title">
                                 <span class="alarm-icon">⬇️</span>
-                                <span>N-Week Low</span>
+                                <span data-i18n="nWeekLow">N-Week Low</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params">
-                            <label>Alert at</label>
+                            <label data-i18n="alertAt">Alert at</label>
                             <input type="number" min="1" max="52" value="8" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
-                            <span class="unit">week low</span>
+                            <span class="unit" data-i18n="weekLow">week low</span>
                         </div>
                     </div>
 
@@ -1386,12 +1434,12 @@
                         <div class="alarm-header">
                             <div class="alarm-title">
                                 <span class="alarm-icon">📊</span>
-                                <span>MA Buy Signal</span>
+                                <span data-i18n="maBuySignal">MA Buy Signal</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <label style="white-space: nowrap;">Alert when</label>
+                            <label style="white-space: nowrap;" data-i18n="alertWhen">Alert when</label>
                             <select class="ma-select-1" onclick="event.stopPropagation()" onchange="window.viewer.updateMAValue(this)">
                                 <option value="10">MA-10</option>
                                 <option value="50" selected>MA-50</option>
@@ -1399,10 +1447,10 @@
                                 <option value="200">MA-200</option>
                             </select>
                             <select class="ma-direction-select" onclick="event.stopPropagation()" onchange="window.viewer.updateMADirection(this)">
-                                <option value="above">is above</option>
-                                <option value="below" selected>is below</option>
-                                <option value="cross-up">crosses up</option>
-                                <option value="cross-down">crosses down</option>
+                                <option value="above" data-i18n="isAbove">is above</option>
+                                <option value="below" selected data-i18n="isBelow">is below</option>
+                                <option value="cross-up" data-i18n="crossesUp">crosses up</option>
+                                <option value="cross-down" data-i18n="crossesDown">crosses down</option>
                             </select>
                             <select class="ma-select-2" onclick="event.stopPropagation()" onchange="window.viewer.updateMAValue(this)">
                                 <option value="10">MA-10</option>
@@ -1418,12 +1466,12 @@
                         <div class="alarm-header">
                             <div class="alarm-title">
                                 <span class="alarm-icon">📉</span>
-                                <span>Daily Loss % (Buy Dip)</span>
+                                <span data-i18n="dailyLossBuyDip">Daily Loss % (Buy Dip)</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params">
-                            <label>Alert when loss ≥</label>
+                            <label data-i18n="alertWhenLossGte">Alert when loss ≥</label>
                             <input type="number" min="0.1" max="50" step="0.1" value="5" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
                             <span class="unit">%</span>
                         </div>
@@ -1434,14 +1482,14 @@
                         <div class="alarm-header">
                             <div class="alarm-title">
                                 <span class="alarm-icon">📊</span>
-                                <span>RSI Oversold (Buy)</span>
+                                <span data-i18n="rsiOversoldBuy">RSI Oversold (Buy)</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params">
-                            <label>Alert when RSI ≤</label>
+                            <label data-i18n="alertWhenRsiLte">Alert when RSI ≤</label>
                             <input type="number" min="1" max="50" step="1" value="30" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
-                            <span class="unit">(oversold)</span>
+                            <span class="unit" data-i18n="oversold">(oversold)</span>
                         </div>
                     </div>
 
@@ -1450,19 +1498,19 @@
                         <div class="alarm-header">
                             <div class="alarm-title">
                                 <span class="alarm-icon">📉</span>
-                                <span>BB Lower Band (Buy)</span>
+                                <span data-i18n="bbLowerBandBuy">BB Lower Band (Buy)</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params">
-                            <label>Price touches/crosses lower band</label>
+                            <label data-i18n="priceTouchesLowerBand">Price touches/crosses lower band</label>
                         </div>
                     </div>
                 </div>
 
                 <!-- RIGHT COLUMN: SELLING SIGNALS -->
                 <div class="alarm-column">
-                    <div class="alarm-column-header selling">
+                    <div class="alarm-column-header selling" data-i18n="sellingSignals">
                         🔴 Selling Signals
                     </div>
 
@@ -1470,13 +1518,13 @@
                     <div class="alarm-card" data-alarm-type="above" onclick="window.viewer.toggleAlarm(this)">
                         <div class="alarm-header">
                             <div class="alarm-title">
-                                <span class="alarm-icon">�</span>
-                                <span>Price Above</span>
+                                <span class="alarm-icon">📈</span>
+                                <span data-i18n="priceAbove">Price Above</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params">
-                            <label>Alert when price ></label>
+                            <label data-i18n="alertWhenPriceGreaterThan">Alert when price ></label>
                             <input type="number" step="0.01" value="300.00" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
                             <span class="unit">USD</span>
                         </div>
@@ -1487,14 +1535,14 @@
                         <div class="alarm-header">
                             <div class="alarm-title">
                                 <span class="alarm-icon">⬆️</span>
-                                <span>N-Week High</span>
+                                <span data-i18n="nWeekHigh">N-Week High</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params">
-                            <label>Alert at</label>
+                            <label data-i18n="alertAt">Alert at</label>
                             <input type="number" min="1" max="52" value="52" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
-                            <span class="unit">week high</span>
+                            <span class="unit" data-i18n="weekHigh">week high</span>
                         </div>
                     </div>
 
@@ -1503,12 +1551,12 @@
                         <div class="alarm-header">
                             <div class="alarm-title">
                                 <span class="alarm-icon">📊</span>
-                                <span>MA Sell Signal</span>
+                                <span data-i18n="maSellSignal">MA Sell Signal</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <label style="white-space: nowrap;">Alert when</label>
+                            <label style="white-space: nowrap;" data-i18n="alertWhen">Alert when</label>
                             <select class="ma-select-1" onclick="event.stopPropagation()" onchange="window.viewer.updateMAValue(this)">
                                 <option value="10" selected>MA-10</option>
                                 <option value="50">MA-50</option>
@@ -1516,10 +1564,10 @@
                                 <option value="200">MA-200</option>
                             </select>
                             <select class="ma-direction-select" onclick="event.stopPropagation()" onchange="window.viewer.updateMADirection(this)">
-                                <option value="above">is above</option>
-                                <option value="below">is below</option>
-                                <option value="cross-up">crosses up</option>
-                                <option value="cross-down" selected>crosses down</option>
+                                <option value="above" data-i18n="isAbove">is above</option>
+                                <option value="below" data-i18n="isBelow">is below</option>
+                                <option value="cross-up" data-i18n="crossesUp">crosses up</option>
+                                <option value="cross-down" selected data-i18n="crossesDown">crosses down</option>
                             </select>
                             <select class="ma-select-2" onclick="event.stopPropagation()" onchange="window.viewer.updateMAValue(this)">
                                 <option value="10">MA-10</option>
@@ -1535,12 +1583,12 @@
                         <div class="alarm-header">
                             <div class="alarm-title">
                                 <span class="alarm-icon">📈</span>
-                                <span>Daily Gain % (Take Profit)</span>
+                                <span data-i18n="dailyGainTakeProfit">Daily Gain % (Take Profit)</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params">
-                            <label>Alert when gain ≥</label>
+                            <label data-i18n="alertWhenGainGte">Alert when gain ≥</label>
                             <input type="number" min="0.1" max="50" step="0.1" value="5" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
                             <span class="unit">%</span>
                         </div>
@@ -1551,14 +1599,14 @@
                         <div class="alarm-header">
                             <div class="alarm-title">
                                 <span class="alarm-icon">📊</span>
-                                <span>RSI Overbought (Sell)</span>
+                                <span data-i18n="rsiOverboughtSell">RSI Overbought (Sell)</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params">
-                            <label>Alert when RSI ≥</label>
+                            <label data-i18n="alertWhenRsiGte">Alert when RSI ≥</label>
                             <input type="number" min="50" max="99" step="1" value="70" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
-                            <span class="unit">(overbought)</span>
+                            <span class="unit" data-i18n="overbought">(overbought)</span>
                         </div>
                     </div>
 
@@ -1567,12 +1615,12 @@
                         <div class="alarm-header">
                             <div class="alarm-title">
                                 <span class="alarm-icon">📈</span>
-                                <span>BB Upper Band (Sell)</span>
+                                <span data-i18n="bbUpperBandSell">BB Upper Band (Sell)</span>
                             </div>
                             <div class="alarm-toggle"></div>
                         </div>
                         <div class="alarm-params">
-                            <label>Price touches/crosses upper band</label>
+                            <label data-i18n="priceTouchesUpperBand">Price touches/crosses upper band</label>
                         </div>
                     </div>
                 </div>
@@ -1581,17 +1629,17 @@
 
         <!-- Email Notification Section -->
         <div class="notification-section">
-            <h3>📧 Get Email Notifications</h3>
+            <h3 data-i18n="getEmailNotifications">📧 Get Email Notifications</h3>
             <div class="notification-content">
-                <div class="notification-info">
+                <div class="notification-info" data-i18n="notificationInfo">
                     💡 Select active alarms above to receive email notifications when they trigger.
                 </div>
                 <div class="selected-alerts-list" id="selectedAlertsList">
-                    <span class="empty-alerts-message">No alarms selected for notifications</span>
+                    <span class="empty-alerts-message" data-i18n="noAlarmsSelected">No alarms selected for notifications</span>
                 </div>
                 <div class="email-input-group">
-                    <input type="email" id="emailInput" placeholder="Enter your email address" value="user@example.com">
-                    <button class="subscribe-btn" onclick="window.viewer.subscribeToNotifications()">
+                    <input type="email" id="emailInput" data-i18n-placeholder="emailPlaceholder" placeholder="Enter your email address" value="user@example.com">
+                    <button class="subscribe-btn" onclick="window.viewer.subscribeToNotifications()" data-i18n="subscribeToAlerts">
                         🔔 Subscribe to Alerts
                     </button>
                 </div>
@@ -1599,8 +1647,39 @@
         </div>
     </div>
 
-    <!-- Load config first, then the main script -->
+    <!-- Load i18n files first -->
+    <script src="i18n/en.js"></script>
+    <script src="i18n/zh.js"></script>
+    <script src="i18n/i18n.js"></script>
+    
+    <!-- Load config, then the main script -->
     <script src="config.js"></script>
     <script src="viewer.js"></script>
+    
+    <!-- Initialize language switcher -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set initial language UI
+            i18n.updateUI();
+            
+            // Update active button
+            const currentLang = i18n.getCurrentLanguage();
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`lang${currentLang.toUpperCase()}`).classList.add('active');
+            
+            // Language switcher buttons
+            document.getElementById('langEN').addEventListener('click', () => {
+                i18n.setLanguage('en');
+                document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('langEN').classList.add('active');
+            });
+            
+            document.getElementById('langZH').addEventListener('click', () => {
+                i18n.setLanguage('zh');
+                document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById('langZH').classList.add('active');
+            });
+        });
+    </script>
 </body>
 </html>

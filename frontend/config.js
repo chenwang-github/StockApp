@@ -1,5 +1,5 @@
 // Production/Azure deployment configuration
 const config = {
-    apiBaseUrl: '/api', // Azure Static Web Apps integrated API
+    apiBaseUrl: 'https://fa-stockapp-net.azurewebsites.net/api', // Azure Function App URL
     environment: 'production'
 };

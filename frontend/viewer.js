@@ -594,29 +594,29 @@ class StockViewer {
 
         document.getElementById('metrics').innerHTML = `
             <div class="metric-card">
-                <div class="metric-label">Stock Symbol</div>
+                <div class="metric-label">${i18n.t('metricStockSymbol')}</div>
                 <div class="metric-value">${symbol}</div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Current Price</div>
+                <div class="metric-label">${i18n.t('metricCurrentPrice')}</div>
                 <div class="metric-value">$${latest.close.toFixed(2)}</div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Total Change</div>
+                <div class="metric-label">${i18n.t('metricTotalChange')}</div>
                 <div class="metric-value" style="${priceChangePercent >= 0 ? 'color: #4ade80;' : 'color: #f87171;'}">
                     ${priceChangePercent >= 0 ? '+' : ''}${priceChangePercent.toFixed(2)}%
                 </div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Highest Price</div>
+                <div class="metric-label">${i18n.t('metricHighestPrice')}</div>
                 <div class="metric-value">$${maxPrice.toFixed(2)}</div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Lowest Price</div>
+                <div class="metric-label">${i18n.t('metricLowestPrice')}</div>
                 <div class="metric-value">$${minPrice.toFixed(2)}</div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Average Price</div>
+                <div class="metric-label">${i18n.t('metricAveragePrice')}</div>
                 <div class="metric-value">$${avgPrice.toFixed(2)}</div>
             </div>
         `;
