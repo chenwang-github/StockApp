@@ -1,6 +1,12 @@
 {
   "routes": [
     {
+      "route": "/i18n/*",
+      "headers": {
+        "content-type": "text/javascript; charset=utf-8"
+      }
+    },
+    {
       "route": "/api/*",
       "allowedRoles": ["anonymous"]
     },
@@ -11,7 +17,7 @@
   ],
   "navigationFallback": {
     "rewrite": "/viewer.html",
-    "exclude": ["/api/*", "/**/*.{css,js,json,png,jpg,jpeg,gif,svg,ico}"]
+    "exclude": ["/i18n/*", "/api/*", "*.{css,js,json,png,jpg,jpeg,gif,svg,ico,html}"]
   },
   "responseOverrides": {
     "404": {
