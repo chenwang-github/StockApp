@@ -75,6 +75,12 @@ const translations_en = {
     emailPlaceholder: "Enter your email address",
     subscribeToAlerts: "🔔 Subscribe to Alerts",
     
+    // Alert Messages
+    featureInDevelopment: "🚧 Feature In Development\n\nEmail notification feature is currently under development and will be available soon!\n\nStay tuned for updates. 🎉",
+    enterEmailAddress: "⚠️ Please enter an email address",
+    enterValidEmail: "⚠️ Please enter a valid email address",
+    activateAlarmFirst: "⚠️ Please activate at least one alarm before subscribing",
+    
     // Error Messages
     errorLoadDataPrefix: "Please Check if Symbol is Correct. Failed to load data for",
     errorLoadDataSuffix: ""

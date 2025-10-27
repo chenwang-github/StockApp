@@ -430,9 +430,6 @@ class StockViewer {
             // updateChart will call updateMetrics with filtered data
             this.updateChart(this.currentData);
             
-            // Check alarms with new data
-            this.checkAlarms();
-            
         } catch (error) {
             log('Error loading stock data: ' + error.message);
             console.error('Full error:', error);
@@ -981,6 +978,10 @@ class StockViewer {
             const input = card.querySelector('input');
             const value = input ? parseFloat(input.value) : null;
             
+            // Get percent value for n-week alarms
+            const percentInput = card.querySelector('[data-percent-input]');
+            const percent = percentInput ? parseFloat(percentInput.value) || 0 : 0;
+            
             // Get direction for daily-change alarm
             const directionSelect = card.querySelector('.direction-select');
             const direction = directionSelect ? directionSelect.value : null;
@@ -996,6 +997,7 @@ class StockViewer {
             this.activeAlarms[alarmType] = {
                 value: value,
                 type: alarmType,
+                percent: percent,
                 direction: direction,
                 ma1: ma1,
                 ma2: ma2,
@@ -1038,277 +1040,6 @@ class StockViewer {
         this.updateSelectedAlertsList();
     }
 
-    checkAlarms() {
-        if (!this.currentData || this.currentData.length === 0) return;
-        
-        const latestPrice = this.currentData[this.currentData.length - 1].close;
-        const symbol = this.currentData.symbol || 'Stock';
-        
-        // Check each active alarm
-        for (const [type, alarm] of Object.entries(this.activeAlarms)) {
-            let triggered = false;
-            let message = '';
-            
-            switch(type) {
-                case 'above':
-                    if (latestPrice > alarm.value) {
-                        triggered = true;
-                        message = `🔔 ${symbol} is above $${alarm.value.toFixed(2)}! Current: $${latestPrice.toFixed(2)}`;
-                    }
-                    break;
-                    
-                case 'below':
-                    if (latestPrice < alarm.value) {
-                        triggered = true;
-                        message = `🔔 ${symbol} is below $${alarm.value.toFixed(2)}! Current: $${latestPrice.toFixed(2)}`;
-                    }
-                    break;
-                    
-                case 'nweek-low':
-                    const lowWeeks = alarm.value;
-                    const lowDays = lowWeeks * 7;
-                    const recentLowData = this.currentData.slice(-lowDays);
-                    const lowestPrice = Math.min(...recentLowData.map(d => d.close));
-                    
-                    if (latestPrice === lowestPrice) {
-                        triggered = true;
-                        message = `🔔 ${symbol} hit ${lowWeeks}-week low! Current: $${latestPrice.toFixed(2)}`;
-                    }
-                    break;
-                    
-                case 'nweek-high':
-                    const highWeeks = alarm.value;
-                    const highDays = highWeeks * 7;
-                    const recentHighData = this.currentData.slice(-highDays);
-                    const highestPrice = Math.max(...recentHighData.map(d => d.close));
-                    
-                    if (latestPrice === highestPrice) {
-                        triggered = true;
-                        message = `🔔 ${symbol} hit ${highWeeks}-week high! Current: $${latestPrice.toFixed(2)}`;
-                    }
-                    break;
-                    
-                case 'daily-gain':
-                    // Need at least 2 data points to calculate daily change
-                    if (this.currentData.length < 2) break;
-                    
-                    const prevPriceGain = this.currentData[this.currentData.length - 2].close;
-                    const gainPercent = ((latestPrice - prevPriceGain) / prevPriceGain) * 100;
-                    
-                    if (gainPercent >= alarm.value) {
-                        triggered = true;
-                        message = `📈 ${symbol} daily gain is +${gainPercent.toFixed(2)}%! Current: $${latestPrice.toFixed(2)}`;
-                    }
-                    break;
-                    
-                case 'daily-loss':
-                    // Need at least 2 data points to calculate daily change
-                    if (this.currentData.length < 2) break;
-                    
-                    const prevPriceLoss = this.currentData[this.currentData.length - 2].close;
-                    const lossPercent = ((latestPrice - prevPriceLoss) / prevPriceLoss) * 100;
-                    
-                    // Note: lossPercent will be negative for losses
-                    if (lossPercent <= -alarm.value) {
-                        triggered = true;
-                        message = `📉 ${symbol} daily loss is ${lossPercent.toFixed(2)}%! Current: $${latestPrice.toFixed(2)}`;
-                    }
-                    break;
-                    
-                case 'daily-change':
-                    // Need at least 2 data points to calculate daily change
-                    if (this.currentData.length < 2) break;
-                    
-                    const previousPrice = this.currentData[this.currentData.length - 2].close;
-                    const changePercent = ((latestPrice - previousPrice) / previousPrice) * 100;
-                    const direction = alarm.direction || 'both';
-                    
-                    // Check based on selected direction
-                    if (direction === 'both') {
-                        // Trigger on either positive or negative change
-                        if (Math.abs(changePercent) >= alarm.value) {
-                            triggered = true;
-                        }
-                    } else if (direction === 'up') {
-                        // Only trigger on positive change
-                        if (changePercent >= alarm.value) {
-                            triggered = true;
-                        }
-                    } else if (direction === 'down') {
-                        // Only trigger on negative change (note: changePercent will be negative)
-                        if (changePercent <= -alarm.value) {
-                            triggered = true;
-                        }
-                    }
-                    
-                    if (triggered) {
-                        const directionText = changePercent > 0 ? 'up' : 'down';
-                        const sign = changePercent > 0 ? '+' : '';
-                        message = `💰 ${symbol} daily change is ${sign}${changePercent.toFixed(2)}% (${directionText})! Current: $${latestPrice.toFixed(2)}`;
-                    }
-                    break;
-                    
-                case 'ma-crossover':
-                    // Need enough data points to calculate both MAs and check for crossover
-                    const ma1Period = alarm.ma1;
-                    const ma2Period = alarm.ma2;
-                    const maxPeriod = Math.max(ma1Period, ma2Period);
-                    const maDirection = alarm.maDirection || 'above';
-                    
-                    if (this.currentData.length < maxPeriod) break;
-                    
-                    const ma1Value = this.calculateMA(this.currentData, ma1Period);
-                    const ma2Value = this.calculateMA(this.currentData, ma2Period);
-                    
-                    if (!ma1Value || !ma2Value) break;
-                    
-                    // Handle different direction types
-                    if (maDirection === 'above') {
-                        // MA1 is above MA2
-                        if (ma1Value > ma2Value) {
-                            triggered = true;
-                            message = `📊 ${symbol} MA-${ma1Period} ($${ma1Value.toFixed(2)}) is above MA-${ma2Period} ($${ma2Value.toFixed(2)})!`;
-                        }
-                    } else if (maDirection === 'below') {
-                        // MA1 is below MA2
-                        if (ma1Value < ma2Value) {
-                            triggered = true;
-                            message = `📊 ${symbol} MA-${ma1Period} ($${ma1Value.toFixed(2)}) is below MA-${ma2Period} ($${ma2Value.toFixed(2)})!`;
-                        }
-                    } else if (maDirection === 'cross-up' || maDirection === 'cross-down') {
-                        // Check for crossover - need previous MA values
-                        if (this.currentData.length < maxPeriod + 1) break;
-                        
-                        const prevData = this.currentData.slice(0, -1);
-                        const prevMA1 = this.calculateMA(prevData, ma1Period);
-                        const prevMA2 = this.calculateMA(prevData, ma2Period);
-                        
-                        if (!prevMA1 || !prevMA2) break;
-                        
-                        if (maDirection === 'cross-up') {
-                            // MA1 crosses up through MA2 (was below, now above)
-                            if (prevMA1 <= prevMA2 && ma1Value > ma2Value) {
-                                triggered = true;
-                                message = `📊 ${symbol} MA-${ma1Period} ($${ma1Value.toFixed(2)}) crossed UP through MA-${ma2Period} ($${ma2Value.toFixed(2)})! 🚀`;
-                            }
-                        } else if (maDirection === 'cross-down') {
-                            // MA1 crosses down through MA2 (was above, now below)
-                            if (prevMA1 >= prevMA2 && ma1Value < ma2Value) {
-                                triggered = true;
-                                message = `📊 ${symbol} MA-${ma1Period} ($${ma1Value.toFixed(2)}) crossed DOWN through MA-${ma2Period} ($${ma2Value.toFixed(2)})! 📉`;
-                            }
-                        }
-                    }
-                    break;
-                    
-                case 'ma-crossover-2':
-                    // Identical logic to ma-crossover, just a separate instance
-                    const ma1Period2 = alarm.ma1;
-                    const ma2Period2 = alarm.ma2;
-                    const maxPeriod2 = Math.max(ma1Period2, ma2Period2);
-                    const maDirection2 = alarm.maDirection || 'above';
-                    
-                    if (this.currentData.length < maxPeriod2) break;
-                    
-                    const ma1Value2 = this.calculateMA(this.currentData, ma1Period2);
-                    const ma2Value2 = this.calculateMA(this.currentData, ma2Period2);
-                    
-                    if (!ma1Value2 || !ma2Value2) break;
-                    
-                    if (maDirection2 === 'above') {
-                        if (ma1Value2 > ma2Value2) {
-                            triggered = true;
-                            message = `📊 ${symbol} MA-${ma1Period2} ($${ma1Value2.toFixed(2)}) is above MA-${ma2Period2} ($${ma2Value2.toFixed(2)})! [Setting 2]`;
-                        }
-                    } else if (maDirection2 === 'below') {
-                        if (ma1Value2 < ma2Value2) {
-                            triggered = true;
-                            message = `📊 ${symbol} MA-${ma1Period2} ($${ma1Value2.toFixed(2)}) is below MA-${ma2Period2} ($${ma2Value2.toFixed(2)})! [Setting 2]`;
-                        }
-                    } else if (maDirection2 === 'cross-up' || maDirection2 === 'cross-down') {
-                        if (this.currentData.length < maxPeriod2 + 1) break;
-                        
-                        const prevData2 = this.currentData.slice(0, -1);
-                        const prevMA1_2 = this.calculateMA(prevData2, ma1Period2);
-                        const prevMA2_2 = this.calculateMA(prevData2, ma2Period2);
-                        
-                        if (!prevMA1_2 || !prevMA2_2) break;
-                        
-                        if (maDirection2 === 'cross-up') {
-                            if (prevMA1_2 <= prevMA2_2 && ma1Value2 > ma2Value2) {
-                                triggered = true;
-                                message = `📊 ${symbol} MA-${ma1Period2} ($${ma1Value2.toFixed(2)}) crossed UP through MA-${ma2Period2} ($${ma2Value2.toFixed(2)})! 🚀 [Setting 2]`;
-                            }
-                        } else if (maDirection2 === 'cross-down') {
-                            if (prevMA1_2 >= prevMA2_2 && ma1Value2 < ma2Value2) {
-                                triggered = true;
-                                message = `📊 ${symbol} MA-${ma1Period2} ($${ma1Value2.toFixed(2)}) crossed DOWN through MA-${ma2Period2} ($${ma2Value2.toFixed(2)})! 📉 [Setting 2]`;
-                            }
-                        }
-                    }
-                    break;
-                    
-                case 'rsi-oversold':
-                    // RSI below threshold indicates oversold (buy signal)
-                    const rsiOversold = this.calculateRSI(this.currentData, this.rsiPeriod);
-                    if (rsiOversold !== null && rsiOversold <= alarm.value) {
-                        triggered = true;
-                        message = `📊 ${symbol} RSI(${this.rsiPeriod}) is ${rsiOversold.toFixed(2)} (oversold ≤ ${alarm.value})! Potential BUY signal! 🟢`;
-                    }
-                    break;
-                    
-                case 'rsi-overbought':
-                    // RSI above threshold indicates overbought (sell signal)
-                    const rsiOverbought = this.calculateRSI(this.currentData, this.rsiPeriod);
-                    if (rsiOverbought !== null && rsiOverbought >= alarm.value) {
-                        triggered = true;
-                        message = `📊 ${symbol} RSI(${this.rsiPeriod}) is ${rsiOverbought.toFixed(2)} (overbought ≥ ${alarm.value})! Potential SELL signal! 🔴`;
-                    }
-                    break;
-                    
-                case 'bb-lower':
-                    // Price touches or crosses below lower Bollinger Band (buy signal)
-                    const bbPeriodLower = 20;
-                    if (this.currentData.length < bbPeriodLower) break;
-                    
-                    const bbLowerBand = this.calculateBollingerBands(this.currentData, bbPeriodLower);
-                    const latestDataLower = this.currentData[this.currentData.length - 1];
-                    
-                    if (bbLowerBand && (latestDataLower.close <= bbLowerBand.lower || latestDataLower.low <= bbLowerBand.lower)) {
-                        triggered = true;
-                        message = `📊 ${symbol} touched Lower Bollinger Band! Price: $${latestPrice.toFixed(2)}, BB-Lower: $${bbLowerBand.lower.toFixed(2)} - Potential BUY signal! 🟢`;
-                    }
-                    break;
-                    
-                case 'bb-upper':
-                    // Price touches or crosses above upper Bollinger Band (sell signal)
-                    const bbPeriodUpper = 20;
-                    if (this.currentData.length < bbPeriodUpper) break;
-                    
-                    const bbUpperBand = this.calculateBollingerBands(this.currentData, bbPeriodUpper);
-                    const latestDataUpper = this.currentData[this.currentData.length - 1];
-                    
-                    if (bbUpperBand && (latestDataUpper.close >= bbUpperBand.upper || latestDataUpper.high >= bbUpperBand.upper)) {
-                        triggered = true;
-                        message = `📊 ${symbol} touched Upper Bollinger Band! Price: $${latestPrice.toFixed(2)}, BB-Upper: $${bbUpperBand.upper.toFixed(2)} - Potential SELL signal! 🔴`;
-                    }
-                    break;
-            }
-            
-            if (triggered) {
-                log(message);
-                this.showAlarmNotification(message);
-            }
-        }
-    }
-
-    showAlarmNotification(message) {
-        // Simple alert for now - could be replaced with a nice toast notification
-        if (confirm(message + '\n\nClick OK to acknowledge.')) {
-            log('Alarm acknowledged');
-        }
-    }
-
     updateAlarmValue(input) {
         const card = input.closest('.alarm-card');
         const alarmType = card.dataset.alarmType;
@@ -1326,6 +1057,21 @@ class StockViewer {
             if (alarmType === 'rsi-oversold' || alarmType === 'rsi-overbought') {
                 this.updateRSIAnnotations();
             }
+        }
+    }
+
+    updateAlarmPercent(input) {
+        const card = input.closest('.alarm-card');
+        const alarmType = card.dataset.alarmType;
+        const newPercent = parseFloat(input.value) || 0;
+        
+        // Update the alarm percent if it's active
+        if (this.activeAlarms[alarmType]) {
+            this.activeAlarms[alarmType].percent = newPercent;
+            log(`Alarm ${alarmType} percent updated to ${newPercent}%`);
+            
+            // Update markers immediately
+            this.updateAlarmMarkers();
         }
     }
 
@@ -1646,7 +1392,17 @@ class StockViewer {
                 const startIdx = Math.max(0, fullDataIndex - lowDays);
                 const recentData = this.currentData.slice(startIdx, fullDataIndex + 1);
                 const lowestPrice = Math.min(...recentData.map(d => d.close));
-                conditionMet = dataPoint.close === lowestPrice;
+                const highestPriceInLowWindow = Math.max(...recentData.map(d => d.close));
+                const lowRange = highestPriceInLowWindow - lowestPrice;
+                const lowPercent = alarm.percent || 0;
+                const lowThreshold = lowestPrice + (lowRange * lowPercent / 100);
+                
+                // Debug logging
+                if (fullDataIndex === this.currentData.length - 1) {
+                    console.log(`[N-Week Low Debug] Current: ${dataPoint.close.toFixed(2)}, Low: ${lowestPrice.toFixed(2)}, High: ${highestPriceInLowWindow.toFixed(2)}, Range: ${lowRange.toFixed(2)}, Percent: ${lowPercent}%, Threshold: ${lowThreshold.toFixed(2)}`);
+                }
+                
+                conditionMet = dataPoint.close <= lowThreshold;
                 break;
                 
             case 'nweek-high':
@@ -1656,7 +1412,11 @@ class StockViewer {
                 const startIdxHigh = Math.max(0, fullDataIndex - highDays);
                 const recentDataHigh = this.currentData.slice(startIdxHigh, fullDataIndex + 1);
                 const highestPrice = Math.max(...recentDataHigh.map(d => d.close));
-                conditionMet = dataPoint.close === highestPrice;
+                const lowestPriceInHighWindow = Math.min(...recentDataHigh.map(d => d.close));
+                const highRange = highestPrice - lowestPriceInHighWindow;
+                const highPercent = alarm.percent || 0;
+                const highThreshold = highestPrice - (highRange * highPercent / 100);
+                conditionMet = dataPoint.close >= highThreshold;
                 break;
                 
             case 'daily-gain':
@@ -1878,6 +1638,9 @@ class StockViewer {
     updateTradingConditionsList() {
         const buyList = document.getElementById('buyConditionsList');
         
+        // If element doesn't exist, skip update
+        if (!buyList) return;
+        
         const buyingSignals = ['below', 'nweek-low', 'ma-crossover', 'daily-loss'];
         
         const activeAlarmTypes = Object.keys(this.activeAlarms);
@@ -1890,7 +1653,7 @@ class StockViewer {
                 const alarm = this.activeAlarms[type];
                 const isSelected = this.buyConditions.includes(type);
                 const icon = this.getAlarmIcon(type);
-                const text = this.getAlarmText(type, alarm.value, alarm.direction, alarm.ma1, alarm.ma2, alarm.maDirection);
+                const text = this.getAlarmText(type, alarm.value, alarm.direction, alarm.ma1, alarm.ma2, alarm.maDirection, alarm.percent);
                 
                 return `
                     <div class="condition-item ${isSelected ? 'selected' : ''}" data-condition-type="${type}">
@@ -1922,55 +1685,136 @@ class StockViewer {
         return icons[type] || '🔔';
     }
 
-    getAlarmText(type, value, direction = null, ma1 = null, ma2 = null, maDirection = null) {
+    getAlarmText(type, value, direction = null, ma1 = null, ma2 = null, maDirection = null, percent = null) {
+        // RSI alarms
+        if (type === 'rsi-oversold') {
+            return i18n.currentLanguage === 'zh' 
+                ? `RSI超卖 <${value}` 
+                : `RSI Oversold <${value}`;
+        }
+        
+        if (type === 'rsi-overbought') {
+            return i18n.currentLanguage === 'zh' 
+                ? `RSI超买 >${value}` 
+                : `RSI Overbought >${value}`;
+        }
+        
+        // Bollinger Bands alarms
+        if (type === 'bb-lower') {
+            return i18n.currentLanguage === 'zh' 
+                ? `BB下轨 (卖入)` 
+                : `BB Lower Band (Buy)`;
+        }
+        
+        if (type === 'bb-upper') {
+            return i18n.currentLanguage === 'zh' 
+                ? `BB上轨 (卖出)` 
+                : `BB Upper Band (Sell)`;
+        }
+        
+        // Daily change alarms
         if (type === 'daily-gain') {
-            return `Daily Gain ≥ +${value.toFixed(1)}%`;
+            return i18n.currentLanguage === 'zh' 
+                ? `每日涨幅 ≥ +${value.toFixed(1)}%` 
+                : `Daily Gain ≥ +${value.toFixed(1)}%`;
         }
         
         if (type === 'daily-loss') {
-            return `Daily Loss ≥ ${value.toFixed(1)}%`;
+            return i18n.currentLanguage === 'zh' 
+                ? `每日跌幅 ≥ ${value.toFixed(1)}%` 
+                : `Daily Loss ≥ ${value.toFixed(1)}%`;
         }
         
         if (type === 'daily-change') {
             const dir = direction || 'both';
             if (dir === 'up') {
-                return `Daily Gain ≥ +${value.toFixed(1)}%`;
+                return i18n.currentLanguage === 'zh' 
+                    ? `每日涨幅 ≥ +${value.toFixed(1)}%` 
+                    : `Daily Gain ≥ +${value.toFixed(1)}%`;
             } else if (dir === 'down') {
-                return `Daily Loss ≤ -${value.toFixed(1)}%`;
+                return i18n.currentLanguage === 'zh' 
+                    ? `每日跌幅 ≤ -${value.toFixed(1)}%` 
+                    : `Daily Loss ≤ -${value.toFixed(1)}%`;
             } else {
-                return `Daily Change ≥ ±${value.toFixed(1)}%`;
+                return i18n.currentLanguage === 'zh' 
+                    ? `每日变化 ≥ ±${value.toFixed(1)}%` 
+                    : `Daily Change ≥ ±${value.toFixed(1)}%`;
             }
         }
         
+        // MA crossover alarms
         if (type === 'ma-crossover') {
             const dir = maDirection || 'above';
-            const directionTexts = {
-                'above': 'Above',
-                'below': 'Below',
-                'cross-up': 'Crosses Up',
-                'cross-down': 'Crosses Down'
-            };
-            return `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [Set 1]`;
+            const directionTexts = i18n.currentLanguage === 'zh' 
+                ? {
+                    'above': '高于',
+                    'below': '低于',
+                    'cross-up': '上穿',
+                    'cross-down': '下穿'
+                }
+                : {
+                    'above': 'Above',
+                    'below': 'Below',
+                    'cross-up': 'Crosses Up',
+                    'cross-down': 'Crosses Down'
+                };
+            return i18n.currentLanguage === 'zh' 
+                ? `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [组1]` 
+                : `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [Set 1]`;
         }
         
         if (type === 'ma-crossover-2') {
             const dir = maDirection || 'above';
-            const directionTexts = {
-                'above': 'Above',
-                'below': 'Below',
-                'cross-up': 'Crosses Up',
-                'cross-down': 'Crosses Down'
-            };
-            return `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [Set 2]`;
+            const directionTexts = i18n.currentLanguage === 'zh' 
+                ? {
+                    'above': '高于',
+                    'below': '低于',
+                    'cross-up': '上穿',
+                    'cross-down': '下穿'
+                }
+                : {
+                    'above': 'Above',
+                    'below': 'Below',
+                    'cross-up': 'Crosses Up',
+                    'cross-down': 'Crosses Down'
+                };
+            return i18n.currentLanguage === 'zh' 
+                ? `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [组2]` 
+                : `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [Set 2]`;
         }
         
-        const texts = {
-            'above': `Price Above $${value.toFixed(2)}`,
-            'below': `Price Below $${value.toFixed(2)}`,
-            'nweek-low': `${value}-Week Low`,
-            'nweek-high': `${value}-Week High`
-        };
-        return texts[type] || 'Unknown';
+        // Price level and N-week alarms
+        if (type === 'above') {
+            return i18n.currentLanguage === 'zh' 
+                ? `价格高于 $${value.toFixed(2)}` 
+                : `Price Above $${value.toFixed(2)}`;
+        }
+        
+        if (type === 'below') {
+            return i18n.currentLanguage === 'zh' 
+                ? `价格低于 $${value.toFixed(2)}` 
+                : `Price Below $${value.toFixed(2)}`;
+        }
+        
+        if (type === 'nweek-low') {
+            const percentText = percent && percent !== 0 
+                ? (i18n.currentLanguage === 'zh' ? ` ±${percent}%` : ` ±${percent}%`)
+                : '';
+            return i18n.currentLanguage === 'zh' 
+                ? `${value}周低点${percentText}` 
+                : `${value}-Week Low${percentText}`;
+        }
+        
+        if (type === 'nweek-high') {
+            const percentText = percent && percent !== 0 
+                ? (i18n.currentLanguage === 'zh' ? ` ±${percent}%` : ` ±${percent}%`)
+                : '';
+            return i18n.currentLanguage === 'zh' 
+                ? `${value}周高点${percentText}` 
+                : `${value}-Week High${percentText}`;
+        }
+        
+        return i18n.currentLanguage === 'zh' ? '未知' : 'Unknown';
     }
 
     toggleBuyCondition(type) {
@@ -2041,7 +1885,7 @@ class StockViewer {
         const activeAlarmTypes = Object.keys(this.activeAlarms);
         
         if (activeAlarmTypes.length === 0) {
-            listContainer.innerHTML = '<span class="empty-alerts-message">No alarms selected for notifications</span>';
+            listContainer.innerHTML = `<span class="empty-alerts-message" data-i18n="noAlarmsSelected">${i18n.t('noAlarmsSelected')}</span>`;
             return;
         }
 
@@ -2050,42 +1894,40 @@ class StockViewer {
             const tag = document.createElement('span');
             tag.className = 'alert-tag active';
             const alarm = this.activeAlarms[type];
-            tag.innerHTML = `${this.getAlarmIcon(type)} ${this.getAlarmText(type, alarm.value, alarm.direction, alarm.ma1, alarm.ma2, alarm.maDirection)}`;
+            tag.innerHTML = `${this.getAlarmIcon(type)} ${this.getAlarmText(type, alarm.value, alarm.direction, alarm.ma1, alarm.ma2, alarm.maDirection, alarm.percent)}`;
             listContainer.appendChild(tag);
         });
     }
 
     subscribeToNotifications() {
+        // Show "in development" message
+        alert(i18n.t('featureInDevelopment'));
+        
+        /* Future implementation:
         const emailInput = document.getElementById('emailInput');
         const email = emailInput.value.trim();
         
         if (!email) {
-            alert('⚠️ Please enter an email address');
+            alert(i18n.t('enterEmailAddress'));
             return;
         }
 
         // Basic email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            alert('⚠️ Please enter a valid email address');
+            alert(i18n.t('enterValidEmail'));
             return;
         }
 
         const activeAlarmTypes = Object.keys(this.activeAlarms);
         if (activeAlarmTypes.length === 0) {
-            alert('⚠️ Please activate at least one alarm before subscribing');
+            alert(i18n.t('activateAlarmFirst'));
             return;
         }
 
-        // Simulate subscription (this is a fake button)
-        const alarmNames = activeAlarmTypes.map(type => {
-            const alarm = this.activeAlarms[type];
-            return this.getAlarmText(type, alarm.value, alarm.direction, alarm.ma1, alarm.ma2, alarm.maDirection);
-        }).join(', ');
-
-        alert(`✅ Success!\n\nEmail notifications will be sent to:\n${email}\n\nFor the following alerts:\n${alarmNames}\n\n(This is a demo - no actual emails will be sent)`);
-        
-        log(`Subscribed to notifications: ${email} for alarms: ${activeAlarmTypes.join(', ')}`);
+        // Send subscription request to backend
+        // Implementation coming soon...
+        */
     }
 }
 

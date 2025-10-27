@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>📈 Stock Viewer</title>
     
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX');
+    </script>
+    
     <!-- External Chart.js libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0"></script>
@@ -1426,6 +1435,14 @@
                             <label data-i18n="alertAt">Alert at</label>
                             <input type="number" min="1" max="52" value="8" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
                             <span class="unit" data-i18n="weekLow">week low</span>
+                            <span style="margin: 0 5px;">±</span>
+                            <input type="number" min="0" max="100" value="0" style="width: 60px;" 
+                                   placeholder="0" 
+                                   data-percent-input
+                                   onclick="event.stopPropagation()" 
+                                   onchange="window.viewer.updateAlarmPercent(this)"
+                                   title="0% = exact low, 10% = within lowest 10% range">
+                            <span class="unit">%</span>
                         </div>
                     </div>
 
@@ -1543,6 +1560,14 @@
                             <label data-i18n="alertAt">Alert at</label>
                             <input type="number" min="1" max="52" value="52" onclick="event.stopPropagation()" onchange="window.viewer.updateAlarmValue(this)">
                             <span class="unit" data-i18n="weekHigh">week high</span>
+                            <span style="margin: 0 5px;">±</span>
+                            <input type="number" min="0" max="100" value="0" style="width: 60px;" 
+                                   placeholder="0" 
+                                   data-percent-input
+                                   onclick="event.stopPropagation()" 
+                                   onchange="window.viewer.updateAlarmPercent(this)"
+                                   title="0% = exact high, 10% = within highest 10% range">
+                            <span class="unit">%</span>
                         </div>
                     </div>
 

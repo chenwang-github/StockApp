@@ -75,6 +75,12 @@ const translations_zh = {
     emailPlaceholder: "输入您的电子邮件地址",
     subscribeToAlerts: "🔔 订阅提醒",
     
+    // Alert Messages
+    featureInDevelopment: "🚧 功能开发中\n\n邮件通知功能正在开发中，即将上线！\n\n敬请期待更新。🎉",
+    enterEmailAddress: "⚠️ 请输入电子邮件地址",
+    enterValidEmail: "⚠️ 请输入有效的电子邮件地址",
+    activateAlarmFirst: "⚠️ 请先激活至少一个提醒再订阅",
+    
     // Error Messages
     errorLoadDataPrefix: "请检查股票代码是否正确。无法加载数据：",
     errorLoadDataSuffix: ""
