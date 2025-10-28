@@ -682,6 +682,12 @@ class StockViewer {
         
         let hasLines = false;
         
+        // Prepare prices array for MA calculation
+        const pricesMA = this.currentData.map(d => ({
+            date: d.date,
+            close: d.close
+        }));
+        
         // Calculate and draw each unique MA period only once
         for (const [period, color] of Object.entries(periodColors)) {
             const maPeriod = parseInt(period);
@@ -693,9 +699,9 @@ class StockViewer {
                 const fullIndex = this.currentData.findIndex(d => d.date === dataPoint.date);
                 
                 if (fullIndex >= maPeriod - 1) {
-                    const dataForMA = this.currentData.slice(0, fullIndex + 1);
-                    const maValue = this.calculateMA(dataForMA, maPeriod);
-                    if (maValue) {
+                    // Use shared Moving Average calculation module
+                    const maValue = window.MovingAverageIndicator.calculateMA(pricesMA, fullIndex, maPeriod);
+                    if (maValue !== null) {
                         maData.push({ x: dataPoint.date, y: maValue });
                     }
                 }
@@ -738,14 +744,27 @@ class StockViewer {
         const middleBandData = [];
         const lowerBandData = [];
         
+        // Prepare prices array for BB calculation
+        const pricesBB = this.currentData.map(d => ({
+            date: d.date,
+            close: d.close,
+            high: d.high,
+            low: d.low
+        }));
+        
         // Calculate Bollinger Bands for each point in filtered data
         filteredData.forEach((dataPoint, index) => {
             // Find this point in the full dataset
             const fullIndex = this.currentData.findIndex(d => d.date === dataPoint.date);
             
             if (fullIndex >= period - 1) {
-                const dataForBB = this.currentData.slice(0, fullIndex + 1);
-                const bb = this.calculateBollingerBands(dataForBB, period);
+                // Use shared Bollinger Bands calculation module (same as alarm checking)
+                const bb = window.BollingerBandsIndicator.calculateBollingerBands(
+                    pricesBB,
+                    fullIndex,
+                    period,
+                    2 // stdDev
+                );
                 
                 if (bb) {
                     upperBandData.push({ x: dataPoint.date, y: bb.upper });
@@ -821,18 +840,22 @@ class StockViewer {
 
         const rsiData = [];
         
-        // Calculate RSI for each point in filtered data
+        // Prepare prices array for RSI calculation
+        const pricesRSI = this.currentData.map(d => ({
+            date: d.date,
+            close: d.close
+        }));
+        
+        // Calculate RSI for all points using shared module
+        const rsiValues = window.RSIIndicator.calculateRSI(pricesRSI, this.rsiPeriod);
+        
+        // Extract RSI values for filtered data points
         filteredData.forEach((dataPoint, index) => {
             // Find this point in the full dataset
             const fullIndex = this.currentData.findIndex(d => d.date === dataPoint.date);
             
-            if (fullIndex >= this.rsiPeriod) { // Need at least period + 1 points for RSI
-                const dataUpToPoint = this.currentData.slice(0, fullIndex + 1);
-                const rsi = this.calculateRSI(dataUpToPoint, this.rsiPeriod);
-                
-                if (rsi !== null) {
-                    rsiData.push({ x: dataPoint.date, y: rsi });
-                }
+            if (fullIndex >= this.rsiPeriod && rsiValues[fullIndex] !== null) {
+                rsiData.push({ x: dataPoint.date, y: rsiValues[fullIndex] });
             }
         });
 
@@ -947,8 +970,8 @@ class StockViewer {
         const isActive = card.classList.contains('active');
         
         // Define buying and selling signal types
-        const buyingSignals = ['below', 'nweek-low', 'ma-crossover', 'daily-loss', 'rsi-oversold', 'bb-lower'];
-        const sellingSignals = ['above', 'nweek-high', 'ma-crossover-2', 'daily-gain', 'rsi-overbought', 'bb-upper'];
+        const buyingSignals = ['nweek-low', 'ma-crossover', 'daily-loss', 'rsi-oversold', 'bb-lower'];
+        const sellingSignals = ['nweek-high', 'ma-crossover-2', 'daily-gain', 'rsi-overbought', 'bb-upper'];
         
         if (isActive) {
             // Deactivate alarm
@@ -985,12 +1008,32 @@ class StockViewer {
         } else {
             // Activate alarm
             card.classList.add('active');
-            const input = card.querySelector('input');
-            const value = input ? parseFloat(input.value) : null;
             
-            // Get percent value for n-week alarms
+            // Get value from input or select (week-select, threshold-select, rsi-threshold-select)
+            const input = card.querySelector('input');
+            const weekSelect = card.querySelector('.week-select');
+            const thresholdSelect = card.querySelector('.threshold-select');
+            const rsiThresholdSelect = card.querySelector('.rsi-threshold-select');
+            const bbDistanceSelect = card.querySelector('.bb-distance-select');
+            
+            let value = null;
+            if (input) {
+                value = parseFloat(input.value);
+            } else if (weekSelect) {
+                value = parseFloat(weekSelect.value);
+            } else if (thresholdSelect) {
+                value = parseFloat(thresholdSelect.value);
+            } else if (rsiThresholdSelect) {
+                value = parseFloat(rsiThresholdSelect.value);
+            } else if (bbDistanceSelect) {
+                value = parseFloat(bbDistanceSelect.value);
+            }
+            
+            // Get percent value for n-week alarms (now from fluctuation-select)
             const percentInput = card.querySelector('[data-percent-input]');
-            const percent = percentInput ? parseFloat(percentInput.value) || 0 : 0;
+            const fluctuationSelect = card.querySelector('.fluctuation-select');
+            const percent = fluctuationSelect ? parseFloat(fluctuationSelect.value) : 
+                           (percentInput ? parseFloat(percentInput.value) || 0 : 0);
             
             // Get direction for daily-change alarm
             const directionSelect = card.querySelector('.direction-select');
@@ -1050,10 +1093,10 @@ class StockViewer {
         this.updateSelectedAlertsList();
     }
 
-    updateAlarmValue(input) {
-        const card = input.closest('.alarm-card');
+    updateAlarmValue(inputOrSelect) {
+        const card = inputOrSelect.closest('.alarm-card');
         const alarmType = card.dataset.alarmType;
-        const newValue = parseFloat(input.value);
+        const newValue = parseFloat(inputOrSelect.value);
         
         // Update the alarm value if it's active
         if (this.activeAlarms[alarmType]) {
@@ -1070,10 +1113,10 @@ class StockViewer {
         }
     }
 
-    updateAlarmPercent(input) {
-        const card = input.closest('.alarm-card');
+    updateAlarmPercent(inputOrSelect) {
+        const card = inputOrSelect.closest('.alarm-card');
         const alarmType = card.dataset.alarmType;
-        const newPercent = parseFloat(input.value) || 0;
+        const newPercent = parseFloat(inputOrSelect.value) || 0;
         
         // Update the alarm percent if it's active
         if (this.activeAlarms[alarmType]) {
@@ -1162,12 +1205,6 @@ class StockViewer {
         this.chart.update('none');
     }
 
-    calculateMA(data, period) {
-        if (data.length < period) return null;
-        const sum = data.slice(-period).reduce((acc, d) => acc + d.close, 0);
-        return sum / period;
-    }
-
     // Calculate EMA (Exponential Moving Average)
     calculateEMA(data, period) {
         if (data.length < period) return null;
@@ -1187,71 +1224,12 @@ class StockViewer {
     }
 
     // Calculate RSI (Relative Strength Index)
-    calculateRSI(data, period = 14) {
-        if (data.length < period + 1) return null;
-        
-        const prices = data.map(d => d.close);
-        const changes = [];
-        
-        // Calculate price changes
-        for (let i = 1; i < prices.length; i++) {
-            changes.push(prices[i] - prices[i - 1]);
-        }
-        
-        // Get recent changes for the period
-        const recentChanges = changes.slice(-period);
-        
-        // Separate gains and losses
-        let avgGain = 0;
-        let avgLoss = 0;
-        
-        for (const change of recentChanges) {
-            if (change > 0) {
-                avgGain += change;
-            } else {
-                avgLoss += Math.abs(change);
-            }
-        }
-        
-        avgGain /= period;
-        avgLoss /= period;
-        
-        // Avoid division by zero
-        if (avgLoss === 0) return 100;
-        
-        const rs = avgGain / avgLoss;
-        const rsi = 100 - (100 / (1 + rs));
-        
-        return rsi;
-    }
-
-    // Calculate Bollinger Bands
-    calculateBollingerBands(data, period = 20, stdDev = 2) {
-        if (data.length < period) return null;
-        
-        // Calculate SMA (middle band)
-        const sum = data.slice(-period).reduce((acc, d) => acc + d.close, 0);
-        const sma = sum / period;
-        
-        // Calculate standard deviation
-        const squaredDifferences = data.slice(-period).map(d => Math.pow(d.close - sma, 2));
-        const variance = squaredDifferences.reduce((acc, val) => acc + val, 0) / period;
-        const standardDeviation = Math.sqrt(variance);
-        
-        // Calculate bands
-        return {
-            middle: sma,
-            upper: sma + (stdDev * standardDeviation),
-            lower: sma - (stdDev * standardDeviation)
-        };
-    }
-
     updateAlarmMarkers() {
         if (!this.chart || !this.currentData || this.currentData.length === 0) return;
         
         // Get active alarms and categorize them
-        const buyingSignals = ['below', 'nweek-low', 'ma-crossover', 'daily-loss', 'rsi-oversold', 'bb-lower']; // buying signal types
-        const sellingSignals = ['above', 'nweek-high', 'ma-crossover-2', 'daily-gain', 'rsi-overbought', 'bb-upper']; // selling signal types
+        const buyingSignals = ['nweek-low', 'ma-crossover', 'daily-loss', 'rsi-oversold', 'bb-lower']; // buying signal types
+        const sellingSignals = ['nweek-high', 'ma-crossover-2', 'daily-gain', 'rsi-overbought', 'bb-upper']; // selling signal types
         
         const activeBuyingAlarms = {};
         const activeSellingAlarms = {};
@@ -1387,14 +1365,6 @@ class StockViewer {
         let conditionMet = false;
                 
         switch(type) {
-            case 'above':
-                conditionMet = dataPoint.close > alarm.value;
-                break;
-                
-            case 'below':
-                conditionMet = dataPoint.close < alarm.value;
-                break;
-                
             case 'nweek-low':
                 const lowWeeks = alarm.value;
                 const lowPercent = alarm.percent || 0;
@@ -1427,23 +1397,23 @@ class StockViewer {
                 break;
                 
             case 'daily-gain':
-                if (fullDataIndex < 1) {
-                    conditionMet = false;
-                    break;
-                }
-                const prevGainPrice = this.currentData[fullDataIndex - 1].close;
-                const gainChange = ((dataPoint.close - prevGainPrice) / prevGainPrice) * 100;
-                conditionMet = gainChange >= alarm.value;
+                // Use shared Daily Change calculation module
+                const pricesGain = this.currentData.map(d => ({
+                    date: d.date,
+                    close: d.close
+                }));
+                const resultGain = window.DailyChangeIndicator.checkDailyGainTrigger(pricesGain, fullDataIndex, alarm.value);
+                conditionMet = resultGain.isTriggered;
                 break;
                 
             case 'daily-loss':
-                if (fullDataIndex < 1) {
-                    conditionMet = false;
-                    break;
-                }
-                const prevLossPrice = this.currentData[fullDataIndex - 1].close;
-                const lossChange = ((dataPoint.close - prevLossPrice) / prevLossPrice) * 100;
-                conditionMet = lossChange <= -alarm.value;
+                // Use shared Daily Change calculation module
+                const pricesLoss = this.currentData.map(d => ({
+                    date: d.date,
+                    close: d.close
+                }));
+                const resultLoss = window.DailyChangeIndicator.checkDailyLossTrigger(pricesLoss, fullDataIndex, alarm.value);
+                conditionMet = resultLoss.isTriggered;
                 break;
                 
             case 'daily-change':
@@ -1478,17 +1448,17 @@ class StockViewer {
                     break;
                 }
                 
-                // Calculate MAs up to this data point
-                const dataUpToPoint = this.currentData.slice(0, fullDataIndex + 1);
-                if (dataUpToPoint.length < maxMAPeriod) {
-                    conditionMet = false;
-                    break;
-                }
+                // Prepare prices for MA calculation
+                const pricesForMA = this.currentData.map(d => ({
+                    date: d.date,
+                    close: d.close
+                }));
                 
-                const ma1Val = this.calculateMA(dataUpToPoint, ma1Period);
-                const ma2Val = this.calculateMA(dataUpToPoint, ma2Period);
+                // Use shared Moving Average calculation module
+                const ma1Val = window.MovingAverageIndicator.calculateMA(pricesForMA, fullDataIndex, ma1Period);
+                const ma2Val = window.MovingAverageIndicator.calculateMA(pricesForMA, fullDataIndex, ma2Period);
                 
-                if (!ma1Val || !ma2Val) {
+                if (ma1Val === null || ma2Val === null) {
                     conditionMet = false;
                     break;
                 }
@@ -1505,11 +1475,10 @@ class StockViewer {
                         break;
                     }
                     
-                    const prevDataUpToPoint = this.currentData.slice(0, fullDataIndex);
-                    const prevMA1 = this.calculateMA(prevDataUpToPoint, ma1Period);
-                    const prevMA2 = this.calculateMA(prevDataUpToPoint, ma2Period);
+                    const prevMA1 = window.MovingAverageIndicator.calculateMA(pricesForMA, fullDataIndex - 1, ma1Period);
+                    const prevMA2 = window.MovingAverageIndicator.calculateMA(pricesForMA, fullDataIndex - 1, ma2Period);
                     
-                    if (!prevMA1 || !prevMA2) {
+                    if (prevMA1 === null || prevMA2 === null) {
                         conditionMet = false;
                         break;
                     }
@@ -1534,16 +1503,17 @@ class StockViewer {
                     break;
                 }
                 
-                const dataUpToPoint_2 = this.currentData.slice(0, fullDataIndex + 1);
-                if (dataUpToPoint_2.length < maxMAPeriod_2) {
-                    conditionMet = false;
-                    break;
-                }
+                // Prepare prices for MA calculation
+                const pricesForMA_2 = this.currentData.map(d => ({
+                    date: d.date,
+                    close: d.close
+                }));
                 
-                const ma1Val_2 = this.calculateMA(dataUpToPoint_2, ma1Period_2);
-                const ma2Val_2 = this.calculateMA(dataUpToPoint_2, ma2Period_2);
+                // Use shared Moving Average calculation module
+                const ma1Val_2 = window.MovingAverageIndicator.calculateMA(pricesForMA_2, fullDataIndex, ma1Period_2);
+                const ma2Val_2 = window.MovingAverageIndicator.calculateMA(pricesForMA_2, fullDataIndex, ma2Period_2);
                 
-                if (!ma1Val_2 || !ma2Val_2) {
+                if (ma1Val_2 === null || ma2Val_2 === null) {
                     conditionMet = false;
                     break;
                 }
@@ -1558,11 +1528,10 @@ class StockViewer {
                         break;
                     }
                     
-                    const prevDataUpToPoint_2 = this.currentData.slice(0, fullDataIndex);
-                    const prevMA1_2 = this.calculateMA(prevDataUpToPoint_2, ma1Period_2);
-                    const prevMA2_2 = this.calculateMA(prevDataUpToPoint_2, ma2Period_2);
+                    const prevMA1_2 = window.MovingAverageIndicator.calculateMA(pricesForMA_2, fullDataIndex - 1, ma1Period_2);
+                    const prevMA2_2 = window.MovingAverageIndicator.calculateMA(pricesForMA_2, fullDataIndex - 1, ma2Period_2);
                     
-                    if (!prevMA1_2 || !prevMA2_2) {
+                    if (prevMA1_2 === null || prevMA2_2 === null) {
                         conditionMet = false;
                         break;
                     }
@@ -1576,66 +1545,71 @@ class StockViewer {
                 break;
                 
             case 'rsi-oversold':
-                // Calculate RSI up to this data point
-                const dataUpToPointRSIOversold = this.currentData.slice(0, fullDataIndex + 1);
-                // Need enough data for RSI calculation
-                if (dataUpToPointRSIOversold.length <= this.rsiPeriod) {
-                    conditionMet = false;
-                    break;
-                }
-                const rsiOversold = this.calculateRSI(dataUpToPointRSIOversold, this.rsiPeriod);
-                conditionMet = rsiOversold !== null && rsiOversold <= alarm.value;
-                if (conditionMet) {
-                    console.log(`�?RSI Oversold MATCH: Date=${dataPoint.date}, RSI=${rsiOversold.toFixed(2)}, Threshold�?{alarm.value}, Period=${this.rsiPeriod}, FullIndex=${fullDataIndex}`);
-                } else if (rsiOversold !== null && Math.abs(rsiOversold - alarm.value) < 10) {
-                    // Log near-misses to help debug
-                    console.log(`�?RSI Close but NO match: Date=${dataPoint.date}, RSI=${rsiOversold.toFixed(2)}, Threshold�?{alarm.value}`);
-                }
+                // Use shared RSI calculation module
+                const pricesRSIOversold = this.currentData.map(d => ({
+                    date: d.date,
+                    close: d.close
+                }));
+                const resultRSIOversold = window.RSIIndicator.checkRSIOversoldTrigger(
+                    pricesRSIOversold, 
+                    fullDataIndex, 
+                    alarm.value, 
+                    this.rsiPeriod
+                );
+                conditionMet = resultRSIOversold.isTriggered;
                 break;
                 
             case 'rsi-overbought':
-                // Calculate RSI up to this data point
-                const dataUpToPointRSIOverbought = this.currentData.slice(0, fullDataIndex + 1);
-                // Need enough data for RSI calculation
-                if (dataUpToPointRSIOverbought.length <= this.rsiPeriod) {
-                    conditionMet = false;
-                    break;
-                }
-                const rsiOverbought = this.calculateRSI(dataUpToPointRSIOverbought, this.rsiPeriod);
-                conditionMet = rsiOverbought !== null && rsiOverbought >= alarm.value;
-                if (conditionMet) {
-                    console.log(`RSI Overbought triggered: RSI=${rsiOverbought.toFixed(2)}, Threshold=${alarm.value}, Period=${this.rsiPeriod}, Date=${dataPoint.date}`);
-                }
+                // Use shared RSI calculation module
+                const pricesRSIOverbought = this.currentData.map(d => ({
+                    date: d.date,
+                    close: d.close
+                }));
+                const resultRSIOverbought = window.RSIIndicator.checkRSIOverboughtTrigger(
+                    pricesRSIOverbought, 
+                    fullDataIndex, 
+                    alarm.value, 
+                    this.rsiPeriod
+                );
+                conditionMet = resultRSIOverbought.isTriggered;
                 break;
                 
             case 'bb-lower':
-                // Check if price touches or crosses below the lower Bollinger Band
-                const bbPeriod = 20;
-                if (fullDataIndex < bbPeriod - 1) {
-                    conditionMet = false;
-                    break;
-                }
-                const dataForBBLower = this.currentData.slice(0, fullDataIndex + 1);
-                const bbLower = this.calculateBollingerBands(dataForBBLower, bbPeriod);
-                if (bbLower) {
-                    // Price touches or goes below lower band (using close or low price)
-                    conditionMet = dataPoint.close <= bbLower.lower || dataPoint.low <= bbLower.lower;
-                }
+                // Use shared Bollinger Bands calculation module
+                const pricesBBLower = this.currentData.map(d => ({
+                    date: d.date,
+                    close: d.close,
+                    high: d.high,
+                    low: d.low
+                }));
+                const distancePercentLower = alarm.value || 0; // value from bb-distance-select
+                const resultBBLower = window.BollingerBandsIndicator.checkBBLowerTrigger(
+                    pricesBBLower,
+                    fullDataIndex,
+                    20, // period
+                    2,  // stdDev
+                    distancePercentLower // distancePercent
+                );
+                conditionMet = resultBBLower.isTriggered;
                 break;
                 
             case 'bb-upper':
-                // Check if price touches or crosses above the upper Bollinger Band
-                const bbPeriodUpper = 20;
-                if (fullDataIndex < bbPeriodUpper - 1) {
-                    conditionMet = false;
-                    break;
-                }
-                const dataForBBUpper = this.currentData.slice(0, fullDataIndex + 1);
-                const bbUpper = this.calculateBollingerBands(dataForBBUpper, bbPeriodUpper);
-                if (bbUpper) {
-                    // Price touches or goes above upper band (using close or high price)
-                    conditionMet = dataPoint.close >= bbUpper.upper || dataPoint.high >= bbUpper.upper;
-                }
+                // Use shared Bollinger Bands calculation module
+                const pricesBBUpper = this.currentData.map(d => ({
+                    date: d.date,
+                    close: d.close,
+                    high: d.high,
+                    low: d.low
+                }));
+                const distancePercentUpper = alarm.value || 0; // value from bb-distance-select
+                const resultBBUpper = window.BollingerBandsIndicator.checkBBUpperTrigger(
+                    pricesBBUpper,
+                    fullDataIndex,
+                    20, // period
+                    2,  // stdDev
+                    distancePercentUpper // distancePercent
+                );
+                conditionMet = resultBBUpper.isTriggered;
                 break;
         }
         
@@ -1648,7 +1622,7 @@ class StockViewer {
         // If element doesn't exist, skip update
         if (!buyList) return;
         
-        const buyingSignals = ['below', 'nweek-low', 'ma-crossover', 'daily-loss'];
+        const buyingSignals = ['nweek-low', 'ma-crossover', 'daily-loss'];
         
         const activeAlarmTypes = Object.keys(this.activeAlarms);
         const activeBuyingAlarms = activeAlarmTypes.filter(type => buyingSignals.includes(type));
@@ -1679,8 +1653,6 @@ class StockViewer {
 
     getAlarmIcon(type) {
         const icons = {
-            'above': '📈',
-            'below': '📉',
             'nweek-low': '⬇️',
             'nweek-high': '⬆️',
             'daily-change': '💰',
@@ -1791,18 +1763,6 @@ class StockViewer {
         }
         
         // Price level and N-week alarms
-        if (type === 'above') {
-            return i18n.currentLanguage === 'zh' 
-                ? `价格高于 $${value.toFixed(2)}` 
-                : `Price Above $${value.toFixed(2)}`;
-        }
-        
-        if (type === 'below') {
-            return i18n.currentLanguage === 'zh' 
-                ? `价格低于 $${value.toFixed(2)}` 
-                : `Price Below $${value.toFixed(2)}`;
-        }
-        
         if (type === 'nweek-low') {
             const percentText = percent && percent !== 0 
                 ? (i18n.currentLanguage === 'zh' ? ` ±${percent}%` : ` ±${percent}%`)

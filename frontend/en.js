@@ -35,8 +35,6 @@ const translations_en = {
     sellingSignals: "🔴 Selling Signals",
     
     // Buying Signals
-    priceBelow: "Price Below",
-    alertWhenPriceLessThan: "Alert when price <",
     nWeekLow: "N-Week Low",
     alertAt: "Alert at",
     weekLow: "week low",
@@ -53,10 +51,9 @@ const translations_en = {
     oversold: "(oversold)",
     bbLowerBandBuy: "BB Lower Band (Buy)",
     priceTouchesLowerBand: "Price touches/crosses lower band",
+    ofLowerBand: "of the lower band",
     
     // Selling Signals
-    priceAbove: "Price Above",
-    alertWhenPriceGreaterThan: "Alert when price >",
     nWeekHigh: "N-Week High",
     weekHigh: "week high",
     maSellSignal: "MA Sell Signal",
@@ -67,6 +64,7 @@ const translations_en = {
     overbought: "(overbought)",
     bbUpperBandSell: "BB Upper Band (Sell)",
     priceTouchesUpperBand: "Price touches/crosses upper band",
+    ofUpperBand: "of the upper band",
     
     // Email Notification
     getEmailNotifications: "📧 Get Email Notifications",

@@ -35,8 +35,6 @@ const translations_zh = {
     sellingSignals: "🔴 卖出信号",
     
     // Buying Signals
-    priceBelow: "价格低于",
-    alertWhenPriceLessThan: "当价格 <",
     nWeekLow: "N周最低",
     alertAt: "提醒在",
     weekLow: "周最低",
@@ -53,10 +51,9 @@ const translations_zh = {
     oversold: "（超卖）",
     bbLowerBandBuy: "BB下轨（买入）",
     priceTouchesLowerBand: "价格触及/穿越下轨",
+    ofLowerBand: "下轨范围内",
     
     // Selling Signals
-    priceAbove: "价格高于",
-    alertWhenPriceGreaterThan: "当价格 >",
     nWeekHigh: "N周最高",
     weekHigh: "周最高",
     maSellSignal: "均线卖出信号",
@@ -67,6 +64,7 @@ const translations_zh = {
     overbought: "（超买）",
     bbUpperBandSell: "BB上轨（卖出）",
     priceTouchesUpperBand: "价格触及/穿越上轨",
+    ofUpperBand: "上轨范围内",
     
     // Email Notification
     getEmailNotifications: "📧 获取邮件通知",

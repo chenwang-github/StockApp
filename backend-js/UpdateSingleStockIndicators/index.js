@@ -3,6 +3,9 @@ const { BlobServiceClient } = require('@azure/storage-blob');
 const { calculateAllNWeekLowTriggers } = require('../shared/indicators/nWeekLow');
 const { calculateAllNWeekHighTriggers } = require('../shared/indicators/nWeekHigh');
 const { calculateAllMACrossTriggers } = require('../shared/indicators/movingAverage');
+const { calculateAllDailyChangeTriggers } = require('../shared/indicators/dailyChange');
+const { calculateAllRSITriggers } = require('../shared/indicators/rsi');
+const { calculateAllBBTriggers } = require('../shared/indicators/bollingerBands');
 
 module.exports = async function (context, req) {
     context.log('UpdateSingleStockIndicators triggered');
@@ -216,6 +219,49 @@ function calculateAlarmList(prices, existingAlarmList, context) {
             ma1Period: trigger.ma1Period,
             ma2Period: trigger.ma2Period,
             direction: trigger.direction,
+            previousTriggeredDate: trigger.previousTriggeredDate
+        });
+    });
+    
+    // Calculate Daily Change triggers
+    const dailyChangeTriggers = calculateAllDailyChangeTriggers(prices);
+    
+    // Add Daily Change triggers to alarm list
+    dailyChangeTriggers.forEach(trigger => {
+        alarmList.push({
+            alarmName: trigger.alarmName,
+            type: trigger.type,
+            threshold: trigger.threshold,
+            previousTriggeredDate: trigger.previousTriggeredDate
+        });
+    });
+    
+    // Calculate RSI triggers
+    const rsiTriggers = calculateAllRSITriggers(prices, 14); // 14-period RSI
+    
+    // Add RSI triggers to alarm list
+    rsiTriggers.forEach(trigger => {
+        alarmList.push({
+            alarmName: trigger.alarmName,
+            type: trigger.type,
+            threshold: trigger.threshold,
+            period: trigger.period,
+            previousTriggeredDate: trigger.previousTriggeredDate
+        });
+    });
+    
+    // Calculate Bollinger Bands triggers with distance thresholds
+    // distancePercents: 0% = touch, 5% = close, 10% = near
+    const bbTriggers = calculateAllBBTriggers(prices, 20, 2, [0, 5, 10]); // 20-period, 2 stdDev
+    
+    // Add BB triggers to alarm list
+    bbTriggers.forEach(trigger => {
+        alarmList.push({
+            alarmName: trigger.alarmName,
+            type: trigger.type,
+            period: trigger.period,
+            stdDev: trigger.stdDev,
+            distancePercent: trigger.distancePercent,
             previousTriggeredDate: trigger.previousTriggeredDate
         });
     });
