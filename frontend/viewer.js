@@ -142,17 +142,27 @@ class StockViewer {
                         },
                         callbacks: {
                             title: function(context) {
-                                return context[0].label;
+                                // For scatter points (buying/selling signals), use raw.x
+                                // For line charts (stock price, MA), use label
+                                return context[0].raw && context[0].raw.x 
+                                    ? context[0].raw.x 
+                                    : context[0].label;
                             },
                             label: function(context) {
+                                // Buying Signals (dataset index 1)
                                 if (context.datasetIndex === 1) {
-                                    return '🔔 Alarm Triggered: $' + context.parsed.y.toFixed(2);
+                                    return '�?' + i18n.t('buyingSignal') + ': $' + context.parsed.y.toFixed(2);
                                 }
-                                if (context.datasetIndex >= 2) {
-                                    // MA line
+                                // Selling Signals (dataset index 2)
+                                if (context.datasetIndex === 2) {
+                                    return '🔴 ' + i18n.t('sellingSignal') + ': $' + context.parsed.y.toFixed(2);
+                                }
+                                // MA lines (dataset index >= 3)
+                                if (context.datasetIndex >= 3) {
                                     return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
                                 }
-                                return 'Price: $' + context.parsed.y.toFixed(2);
+                                // Stock price (dataset index 0)
+                                return i18n.t('price') + ': $' + context.parsed.y.toFixed(2);
                             }
                         }
                     },
@@ -1387,36 +1397,33 @@ class StockViewer {
                 
             case 'nweek-low':
                 const lowWeeks = alarm.value;
-                const lowDays = lowWeeks * 7;
-                // Use full dataset index, not filtered index
-                const startIdx = Math.max(0, fullDataIndex - lowDays);
-                const recentData = this.currentData.slice(startIdx, fullDataIndex + 1);
-                const lowestPrice = Math.min(...recentData.map(d => d.close));
-                const highestPriceInLowWindow = Math.max(...recentData.map(d => d.close));
-                const lowRange = highestPriceInLowWindow - lowestPrice;
                 const lowPercent = alarm.percent || 0;
-                const lowThreshold = lowestPrice + (lowRange * lowPercent / 100);
                 
-                // Debug logging
-                if (fullDataIndex === this.currentData.length - 1) {
-                    console.log(`[N-Week Low Debug] Current: ${dataPoint.close.toFixed(2)}, Low: ${lowestPrice.toFixed(2)}, High: ${highestPriceInLowWindow.toFixed(2)}, Range: ${lowRange.toFixed(2)}, Percent: ${lowPercent}%, Threshold: ${lowThreshold.toFixed(2)}`);
+                // Use shared N-week low calculation module
+                const prices = this.currentData.map(d => ({
+                    date: d.date,
+                    close: d.close
+                }));
+                const result = window.NWeekLowIndicator.checkNWeekLowTrigger(prices, fullDataIndex, lowWeeks, lowPercent);
+                conditionMet = result.isTriggered;
+                
+                // Debug logging for dates around 2025-08-01
+                if (lowWeeks === 4 && lowPercent === 0 && dataPoint.date >= '2025-07-28' && dataPoint.date <= '2025-08-10') {
+                    console.log(`[4w 0% Shared] ${dataPoint.date}: Close=${dataPoint.close.toFixed(2)}, WindowLow=${result.windowLow?.toFixed(2)}, Threshold=${result.threshold?.toFixed(2)}, Triggered=${conditionMet}`);
                 }
-                
-                conditionMet = dataPoint.close <= lowThreshold;
                 break;
                 
             case 'nweek-high':
                 const highWeeks = alarm.value;
-                const highDays = highWeeks * 7;
-                // Use full dataset index, not filtered index
-                const startIdxHigh = Math.max(0, fullDataIndex - highDays);
-                const recentDataHigh = this.currentData.slice(startIdxHigh, fullDataIndex + 1);
-                const highestPrice = Math.max(...recentDataHigh.map(d => d.close));
-                const lowestPriceInHighWindow = Math.min(...recentDataHigh.map(d => d.close));
-                const highRange = highestPrice - lowestPriceInHighWindow;
                 const highPercent = alarm.percent || 0;
-                const highThreshold = highestPrice - (highRange * highPercent / 100);
-                conditionMet = dataPoint.close >= highThreshold;
+                
+                // Use shared N-week high calculation module
+                const pricesHigh = this.currentData.map(d => ({
+                    date: d.date,
+                    close: d.close
+                }));
+                const resultHigh = window.NWeekHighIndicator.checkNWeekHighTrigger(pricesHigh, fullDataIndex, highWeeks, highPercent);
+                conditionMet = resultHigh.isTriggered;
                 break;
                 
             case 'daily-gain':
@@ -1579,10 +1586,10 @@ class StockViewer {
                 const rsiOversold = this.calculateRSI(dataUpToPointRSIOversold, this.rsiPeriod);
                 conditionMet = rsiOversold !== null && rsiOversold <= alarm.value;
                 if (conditionMet) {
-                    console.log(`✅ RSI Oversold MATCH: Date=${dataPoint.date}, RSI=${rsiOversold.toFixed(2)}, Threshold≤${alarm.value}, Period=${this.rsiPeriod}, FullIndex=${fullDataIndex}`);
+                    console.log(`�?RSI Oversold MATCH: Date=${dataPoint.date}, RSI=${rsiOversold.toFixed(2)}, Threshold�?{alarm.value}, Period=${this.rsiPeriod}, FullIndex=${fullDataIndex}`);
                 } else if (rsiOversold !== null && Math.abs(rsiOversold - alarm.value) < 10) {
                     // Log near-misses to help debug
-                    console.log(`❌ RSI Close but NO match: Date=${dataPoint.date}, RSI=${rsiOversold.toFixed(2)}, Threshold≤${alarm.value}`);
+                    console.log(`�?RSI Close but NO match: Date=${dataPoint.date}, RSI=${rsiOversold.toFixed(2)}, Threshold�?{alarm.value}`);
                 }
                 break;
                 
@@ -1715,30 +1722,30 @@ class StockViewer {
         // Daily change alarms
         if (type === 'daily-gain') {
             return i18n.currentLanguage === 'zh' 
-                ? `每日涨幅 ≥ +${value.toFixed(1)}%` 
-                : `Daily Gain ≥ +${value.toFixed(1)}%`;
+                ? `每日涨幅 �?+${value.toFixed(1)}%` 
+                : `Daily Gain �?+${value.toFixed(1)}%`;
         }
         
         if (type === 'daily-loss') {
             return i18n.currentLanguage === 'zh' 
-                ? `每日跌幅 ≥ ${value.toFixed(1)}%` 
-                : `Daily Loss ≥ ${value.toFixed(1)}%`;
+                ? `每日跌幅 �?${value.toFixed(1)}%` 
+                : `Daily Loss �?${value.toFixed(1)}%`;
         }
         
         if (type === 'daily-change') {
             const dir = direction || 'both';
             if (dir === 'up') {
                 return i18n.currentLanguage === 'zh' 
-                    ? `每日涨幅 ≥ +${value.toFixed(1)}%` 
-                    : `Daily Gain ≥ +${value.toFixed(1)}%`;
+                    ? `每日涨幅 �?+${value.toFixed(1)}%` 
+                    : `Daily Gain �?+${value.toFixed(1)}%`;
             } else if (dir === 'down') {
                 return i18n.currentLanguage === 'zh' 
-                    ? `每日跌幅 ≤ -${value.toFixed(1)}%` 
-                    : `Daily Loss ≤ -${value.toFixed(1)}%`;
+                    ? `每日跌幅 �?-${value.toFixed(1)}%` 
+                    : `Daily Loss �?-${value.toFixed(1)}%`;
             } else {
                 return i18n.currentLanguage === 'zh' 
-                    ? `每日变化 ≥ ±${value.toFixed(1)}%` 
-                    : `Daily Change ≥ ±${value.toFixed(1)}%`;
+                    ? `每日变化 �?±${value.toFixed(1)}%` 
+                    : `Daily Change �?±${value.toFixed(1)}%`;
             }
         }
         
@@ -1759,7 +1766,7 @@ class StockViewer {
                     'cross-down': 'Crosses Down'
                 };
             return i18n.currentLanguage === 'zh' 
-                ? `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [组1]` 
+                ? `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [�?]` 
                 : `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [Set 1]`;
         }
         
@@ -1779,7 +1786,7 @@ class StockViewer {
                     'cross-down': 'Crosses Down'
                 };
             return i18n.currentLanguage === 'zh' 
-                ? `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [组2]` 
+                ? `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [�?]` 
                 : `MA-${ma1} ${directionTexts[dir]} MA-${ma2} [Set 2]`;
         }
         
@@ -1801,7 +1808,7 @@ class StockViewer {
                 ? (i18n.currentLanguage === 'zh' ? ` ±${percent}%` : ` ±${percent}%`)
                 : '';
             return i18n.currentLanguage === 'zh' 
-                ? `${value}周低点${percentText}` 
+                ? `${value}周低�?{percentText}` 
                 : `${value}-Week Low${percentText}`;
         }
         
@@ -1810,7 +1817,7 @@ class StockViewer {
                 ? (i18n.currentLanguage === 'zh' ? ` ±${percent}%` : ` ±${percent}%`)
                 : '';
             return i18n.currentLanguage === 'zh' 
-                ? `${value}周高点${percentText}` 
+                ? `${value}周高�?{percentText}` 
                 : `${value}-Week High${percentText}`;
         }
         

@@ -67,14 +67,26 @@ public class TechnicalIndicators
 
 public class NWeekIndicator
 {
-    public int max_n { get; set; } = 52; // Maximum weeks to look back (fixed at 52)
-    public int n { get; set; } // Current price is n-week low/high (0 if not applicable)
+    [JsonPropertyName("triggers")]
+    public List<NWeekTrigger> triggers { get; set; } = new();
+}
+
+public class NWeekTrigger
+{
+    [JsonPropertyName("weeks")]
+    public int weeks { get; set; }
+    
+    [JsonPropertyName("fluctuation")]
+    public int fluctuation { get; set; }  // 0, 10, 20
+    
+    [JsonPropertyName("previousTriggeredDate")]
+    public DateTime? previousTriggeredDate { get; set; }
 }
 
 public class MACache
 {
-    public PricePoint price { get; set; }
-    public Dictionary<string, MALine> lines { get; set; }
+    public PricePoint price { get; set; } = new();
+    public Dictionary<string, MALine> lines { get; set; } = new();
 }
 
 public class PricePoint
@@ -92,7 +104,7 @@ public class MALine
 public class RSICache
 {
     public int period { get; set; }
-    public RSIValues values { get; set; }
+    public RSIValues values { get; set; } = new();
 }
 
 public class RSIValues

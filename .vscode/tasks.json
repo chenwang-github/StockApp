@@ -2,6 +2,15 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "npm install (functions)",
+			"type": "shell",
+			"command": "npm install",
+			"options": {
+				"cwd": "${workspaceFolder}/backend-js"
+			},
+			"problemMatcher": []
+		},
+		{
 			"label": "pip install (functions)",
 			"type": "shell",
 			"osx": {

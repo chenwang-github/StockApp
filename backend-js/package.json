@@ -1,0 +1,16 @@
+{
+  "name": "stockapp-backend-js",
+  "version": "1.0.0",
+  "description": "StockApp Backend - Node.js Version",
+  "scripts": {
+    "start": "func start",
+    "deploy": "func azure functionapp publish fa-stockapp-js"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0",
+    "@azure/storage-blob": "^12.17.0",
+    "@azure/cosmos": "^4.0.0",
+    "axios": "^1.6.2"
+  },
+  "devDependencies": {}
+}
