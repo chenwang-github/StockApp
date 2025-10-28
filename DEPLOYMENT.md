@@ -5,7 +5,7 @@ This guide will help you deploy the StockApp to Azure Static Web Apps with an in
 
 ## Architecture
 - **Frontend**: Static HTML/JS (`frontend/` folder)
-- **Backend**: Azure Functions (.NET 8) (`backend/` folder)
+- **Backend**: Azure Functions (Node.js) (`backend-js/` folder)
 - **Database**: Azure Cosmos DB (NoSQL)
 - **Hosting**: Azure Static Web Apps
 
@@ -35,7 +35,7 @@ az staticwebapp create \
   --location eastus2 \
   --branch master \
   --app-location "frontend" \
-  --api-location "backend" \
+  --api-location "backend-js" \
   --output-location "" \
   --login-with-github
 ```
@@ -102,7 +102,8 @@ start frontend/viewer.html
 
 ### Backend
 ```bash
-cd backend
+cd backend-js
+npm install
 func start
 ```
 
@@ -112,10 +113,10 @@ func start
   "IsEncrypted": false,
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
     "CosmosConnectionString": "YOUR_COSMOS_CONNECTION_STRING",
     "CosmosDatabaseName": "stockDB",
-    "CosmosContainerName": "stockContainer"
+    "CosmosContainerName": "watchlist"
   }
 }
 ```
