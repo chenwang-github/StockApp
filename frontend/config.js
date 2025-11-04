@@ -1,6 +1,6 @@
 // Production/Azure deployment configuration
-// For Azure Static Web Apps, the backend is at /api (relative path)
+// Points to standalone Azure Function App
 const config = {
-    apiBaseUrl: '/api', // Azure Static Web Apps auto-routes /api to backend-js functions
+    apiBaseUrl: 'https://fa-stockapp-js.azurewebsites.net/api',
     environment: 'production'
 };
