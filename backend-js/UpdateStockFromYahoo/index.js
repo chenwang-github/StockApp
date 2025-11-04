@@ -23,6 +23,16 @@ module.exports = async function (context, req) {
     try {
         // Initialize Blob Service Client
         const connectionString = process.env.AzureWebJobsStorage;
+        
+        if (!connectionString) {
+            context.log.error('AzureWebJobsStorage environment variable is not set');
+            context.res = {
+                status: 500,
+                body: { error: 'Storage connection string is not configured' }
+            };
+            return;
+        }
+        
         const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
         
         // Ensure container exists with public read access for blobs
@@ -108,11 +118,13 @@ module.exports = async function (context, req) {
         };
     } catch (error) {
         context.log.error(`Error processing stock data for ${symbol}:`, error);
+        context.log.error('Error stack:', error.stack);
         context.res = {
-            status: 400,
+            status: 500,
             body: { 
                 error: error.message,
-                details: error.toString()
+                details: error.toString(),
+                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
             }
         };
     }
