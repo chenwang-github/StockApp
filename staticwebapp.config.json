@@ -6,16 +6,16 @@
     },
     {
       "route": "/",
-      "rewrite": "/viewer.html"
+      "rewrite": "/index.html"
     }
   ],
   "navigationFallback": {
-    "rewrite": "/viewer.html",
+    "rewrite": "/index.html",
     "exclude": ["/api/*", "/*.{css,js,json,png,jpg,jpeg,gif,svg,ico}"]
   },
   "responseOverrides": {
     "404": {
-      "rewrite": "/viewer.html"
+      "rewrite": "/index.html"
     }
   },
   "globalHeaders": {
