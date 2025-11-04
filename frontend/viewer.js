@@ -364,22 +364,23 @@ class StockViewer {
         try {
             document.getElementById('metrics').innerHTML = '<div class="loading">Loading data...</div>';
             
-            // Try to download from blob storage
+            // ALWAYS call backend first to check/update data freshness
+            // The smart backend will decide whether to fetch new data or return cached response
+            log(`Checking data freshness for ${symbol}...`);
+            const updateResult = await this.fetchAndStoreStock(symbol);
+            
+            // Now download the (potentially updated) CSV from blob storage
             let csvText = await this.downloadFromBlobStorage(symbol);
             
-            // If not found in blob storage, fetch from provider and store it
             if (!csvText) {
-                log(`${symbol} not found in blob storage. Fetching from provider...`);
-                document.getElementById('metrics').innerHTML = '<div class="loading">Fetching data...</div>';
-                
-                await this.fetchAndStoreStock(symbol);
-                
-                // Now download from blob storage
-                csvText = await this.downloadFromBlobStorage(symbol);
-                
-                if (!csvText) {
-                    throw new Error(`Failed to fetch data for ${symbol}`);
-                }
+                throw new Error(`Failed to load data for ${symbol}`);
+            }
+            
+            // Show freshness indicator to user
+            if (updateResult.cached && updateResult.isFresh) {
+                log(`✓ ${symbol} data is up-to-date (as of ${updateResult.lastDate})`);
+            } else if (updateResult.recordsAdded > 0) {
+                log(`✓ ${symbol} updated with ${updateResult.recordsAdded} new records`);
             }
             
             // Parse CSV data
@@ -482,7 +483,12 @@ class StockViewer {
             }
             
             const result = await response.json();
-            log(`Successfully fetched ${symbol}: ${result.recordsAdded} records added`);
+            
+            if (result.cached && result.isFresh) {
+                log(`${symbol} data is already up-to-date (last: ${result.lastDate})`);
+            } else {
+                log(`Successfully fetched ${symbol}: ${result.recordsAdded} records added`);
+            }
             
             return result;
         } catch (error) {

@@ -19,6 +19,9 @@ module.exports = async function (context, req) {
     }
 
     context.log(`Processing stock symbol: ${symbol}`);
+    
+    // Check if force update is requested
+    const forceUpdate = req.query.force === 'true';
 
     try {
         // Initialize Blob Service Client
@@ -47,8 +50,35 @@ module.exports = async function (context, req) {
         let lastDataDate = null;
         let isNewFile = false;
 
-        // Check if blob exists and get the last date
+        // Check if blob exists and check metadata for freshness
         const blobExists = await blobClient.exists();
+        
+        if (blobExists && !forceUpdate) {
+            // Check blob metadata for last data date
+            const properties = await blobClient.getProperties();
+            const metadata = properties.metadata || {};
+            
+            if (metadata.lastDataDate) {
+                lastDataDate = new Date(metadata.lastDataDate);
+                const isFresh = isDataFresh(lastDataDate, context);
+                
+                if (isFresh) {
+                    context.log(`Data for ${symbol} is already fresh (last: ${lastDataDate.toISOString().split('T')[0]}). Skipping update.`);
+                    context.res = {
+                        status: 200,
+                        body: {
+                            symbol: symbol,
+                            message: 'Data is up-to-date',
+                            cached: true,
+                            lastDate: lastDataDate.toISOString().split('T')[0],
+                            recordsAdded: 0,
+                            isFresh: true
+                        }
+                    };
+                    return;
+                }
+            }
+        }
         
         if (blobExists) {
             context.log(`Existing CSV found for ${symbol}. Checking last date...`);
@@ -91,18 +121,27 @@ module.exports = async function (context, req) {
 
         // Convert to CSV format
         const csvContent = convertToCsv(stockData);
+        
+        // Calculate metadata
+        const dates = stockData.map(x => x.date);
+        const lastDate = new Date(Math.max(...dates));
+        const metadata = {
+            symbol: symbol,
+            lastDataDate: lastDate.toISOString(),
+            recordCount: stockData.length.toString(),
+            lastUpdateTime: new Date().toISOString()
+        };
 
         if (isNewFile) {
-            // Upload new CSV file
-            await uploadCsvToBlob(blobClient, csvContent);
+            // Upload new CSV file with metadata
+            await uploadCsvToBlob(blobClient, csvContent, metadata);
             context.log(`Created new CSV for ${symbol} with ${stockData.length} records`);
         } else {
-            // Append to existing CSV file
-            await appendCsvToBlob(blobClient, csvContent, context);
+            // Append to existing CSV file with updated metadata
+            await appendCsvToBlob(blobClient, csvContent, metadata, context);
             context.log(`Updated CSV for ${symbol} with ${stockData.length} new records`);
         }
 
-        const dates = stockData.map(x => x.date);
         context.res = {
             status: 200,
             body: {
@@ -113,7 +152,9 @@ module.exports = async function (context, req) {
                     from: new Date(Math.min(...dates)).toISOString().split('T')[0],
                     to: new Date(Math.max(...dates)).toISOString().split('T')[0]
                 },
-                blobPath: `${CONTAINER_NAME}/${blobName}`
+                lastDate: lastDate.toISOString().split('T')[0],
+                blobPath: `${CONTAINER_NAME}/${blobName}`,
+                isFresh: true
             }
         };
     } catch (error) {
@@ -249,15 +290,20 @@ function convertToCsv(stockData) {
 /**
  * Upload CSV content to blob (for new files)
  */
-async function uploadCsvToBlob(blobClient, csvContent) {
+async function uploadCsvToBlob(blobClient, csvContent, metadata) {
     const blockBlobClient = blobClient.getBlockBlobClient();
-    await blockBlobClient.upload(csvContent, csvContent.length);
+    await blockBlobClient.upload(csvContent, csvContent.length, {
+        metadata: metadata,
+        blobHTTPHeaders: {
+            blobContentType: 'text/csv'
+        }
+    });
 }
 
 /**
  * Append new data to existing CSV blob
  */
-async function appendCsvToBlob(blobClient, newCsvContent, context) {
+async function appendCsvToBlob(blobClient, newCsvContent, metadata, context) {
     // Download existing content
     const downloadResponse = await blobClient.download();
     const existingContent = await streamToString(downloadResponse.readableStreamBody);
@@ -269,9 +315,14 @@ async function appendCsvToBlob(blobClient, newCsvContent, context) {
     // Append new data
     const updatedContent = existingContent.trimEnd() + '\n' + dataLines;
     
-    // Upload updated content
+    // Upload updated content with metadata
     const blockBlobClient = blobClient.getBlockBlobClient();
-    await blockBlobClient.upload(updatedContent, updatedContent.length);
+    await blockBlobClient.upload(updatedContent, updatedContent.length, {
+        metadata: metadata,
+        blobHTTPHeaders: {
+            blobContentType: 'text/csv'
+        }
+    });
 }
 
 /**
@@ -288,4 +339,58 @@ async function streamToString(readableStream) {
         });
         readableStream.on('error', reject);
     });
+}
+
+/**
+ * Check if stock data is fresh (within acceptable staleness threshold)
+ * @param {Date} lastDataDate - The date of the last data point in the CSV
+ * @param {Object} context - Azure Function context for logging
+ * @returns {boolean} - True if data is fresh, false if stale
+ */
+function isDataFresh(lastDataDate, context) {
+    if (!lastDataDate) {
+        context.log('No last data date found, data is stale');
+        return false;
+    }
+    
+    const now = new Date();
+    const nowUTC = new Date(now.toISOString().split('T')[0]); // Today's date in UTC
+    const lastDateUTC = new Date(lastDataDate.toISOString().split('T')[0]);
+    
+    // Calculate days difference
+    const daysDiff = Math.floor((nowUTC - lastDateUTC) / (1000 * 60 * 60 * 24));
+    
+    context.log(`Data freshness check: last date = ${lastDateUTC.toISOString().split('T')[0]}, today = ${nowUTC.toISOString().split('T')[0]}, days diff = ${daysDiff}`);
+    
+    // Market operates Monday-Friday
+    // Data is fresh if:
+    // - Last date is today (0 days old)
+    // - Last date is yesterday and today is Monday (weekend case)
+    // - Last date is Friday and today is weekend/Monday (up to 3 days)
+    // Stale if more than 3 days old
+    
+    if (daysDiff === 0) {
+        context.log('Data is from today - FRESH');
+        return true;
+    }
+    
+    if (daysDiff === 1) {
+        context.log('Data is from yesterday - FRESH');
+        return true;
+    }
+    
+    // For Monday, Friday data is acceptable (3 days old)
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    if (dayOfWeek === 1 && daysDiff <= 3) { // Monday
+        context.log('Monday with weekend gap - FRESH');
+        return true;
+    }
+    
+    if (daysDiff <= 2) {
+        context.log('Within 2-day threshold - FRESH');
+        return true;
+    }
+    
+    context.log(`Data is ${daysDiff} days old - STALE`);
+    return false;
 }
